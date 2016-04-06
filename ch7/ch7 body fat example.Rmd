@@ -1,0 +1,112 @@
+---
+title: "Ch7 Body Fat Example"
+author: "Adam McQuistan"
+date: "Monday, April 04, 2016"
+output: pdf_document
+---
+
+
+#Body Fat Data
+
+Y = Body Fat
+X1 = Tricep Skinfold Thickness
+X2 = Thigh Circumference
+X3 = Midarm Circumference
+
+```{r}
+setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\ch7")
+df <- read.table(file="data/bodyfat.txt", header=T, as.is=T, sep="\t")
+str(df)
+```
+
+Create function to produce a full anova table from an anova model built off a lm model
+
+```{r}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+#Evaluate the Effects of Square Errors as $\beta_k$ enter the model
+
+$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3$
+
+```{r}
+result_lm <- lm(Y ~ X1 + X2 + X3, data=df)
+result_aov <- fullRegressionAnova(anova(result_lm)) 
+```
+
+##Test whether a single $\beta_k$ = 0
+
+To test if a singel $\beta_k$ can be dropped from a multiple regression model, use the following formal test
+
+$H_0: \beta_k = 0$
+
+$H_a: \beta_k \neq{0}$
+
+Use the test statistics
+
+__t-test__
+  - if |t*| $\leq{t(1-\alpha ; n-p)}$ conclude $H_0$ 
+
+__partial F test__  Note the partial F test is different in that it only tests whether one $\beta_k = 0$ not whether all $\beta_k = 0$
+  - if F* $\leq{F}$ critical conclude $H_0$
+  
+Test if X3 should be removed from the model at an $\alpha = 0.01$ 
+
+```{r}
+F_stat = result_aov$F_stats[4]
+F_crit = qf(0.99, result_aov$DF[4], result_aov$DF[5])
+conclusion <- ifelse(F_stat <= F_crit, "Conclude Null Hypthosis", "Reject Null Hypthosis")
+cat("F* =", F_stat, "F crit =", F_crit, "\n", conclusion, sep=" ")
+```
+
+##Test whether multiple $\beta_K=0$
+
+Test whether both X2 and X3 should be removed from the model
+
+$H_0: \beta_2 = \beta_3 = 0$
+
+$H_a$: not both $\beta_2$ and $\beta_3$ equal zero
+
+Do a simple anova test of reduced against full model and assess partial F test
+to test whether at $\alpha = 0.05$ the models are different
+
+```{r}
+full <- result_lm
+reduced <- lm(Y ~ X1, data=df)
+anova(reduced, full)
+```
+
+You can see that the p-value is essentailly equal to 0.05 so it probably would not be a good idea to remove both from the model.
+
+##Determine Partial Coefficient of Determination
+
+$R^{2}_Y$ 2|1 = SSR(X1|X2) / SSE(X1)
+
+So evalate the amount of variation explained when X2 is added to the model after X1
+
+```{r}
+full <- lm(Y ~ X1 + X2, data=df)
+aov_full <- fullRegressionAnova(anova(full))
+reduced <- lm(Y ~ X1, data=df)
+aov_reduced <- fullRegressionAnova(anova(reduced))
+R_Sq <- aov_full$SS[3] / aov_reduced$SS[3]
+```
+
+When X2 is added to the model the sum of square error is reduced by 23.2%.
+

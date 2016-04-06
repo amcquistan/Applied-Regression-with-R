@@ -1,0 +1,131 @@
+---
+title: ''
+output: pdf_document
+---
+
+#3. Do problem 3.18 on page 151.
+
+##Problem 3.18: Production time.  In a manufacturing study, the production times for 111 recent production runs were obtained.  The table below lists for each run the production time in hours (Y) and the production lot size (X).
+
+__A.  Prepare a scatter plot of the data.  Does a linear relation appear adequate here?  Would a transformation on X or Y be more appropriate here?__
+
+```{r}
+df <- read.csv("data/CH. 3, PR 18.csv")
+result <- lm(Hours ~ LotSize, data=df)
+plot(x=df$LotSize, y=df$Hours, xlab="Lot Size", ylab="Production Time (Hours)")
+abline(result, col="red")
+```
+
+It is difficult to tell from the plot of Hours as a funtion of Lot size along.  However, I would say it is reasonably linear.  
+
+
+Below is a plot of the residuals vs fitted (predicted) values and a histogram of the residuals which does suggest some departures from linearity.  
+
+```{r, fig.height=3.6, fig.width=6}
+with(result, {
+     plot(x=fitted.values, y=residuals,
+          ylim=c(-max(residuals), max(residuals)),
+          xlab="Fitted Values", ylab="Residuals")
+     
+     points(c(min(fitted.values), max(fitted.values)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+
+```
+
+```{r, fig.height=3.6, fig.width=6}
+hist(result$residuals, main="Distribution of Residuals", xlab="Residuals", breaks=20, col="grey")
+```
+
+
+
+__B.  Use the transformation $X' = \sqrt{X}$ and obtain the estimated linear regression function for the transformed data.__
+
+
+```{r}
+transformed_result <- lm(Hours ~ sqrt(LotSize), data=df)
+summary(result)
+summary(transformed_result)
+
+b0 <- coef(summary(transformed_result))[1,1]
+b1 <- coef(summary(transformed_result))[2,1]
+```
+
+
+Hours = `r b0` + `r b1` x $\sqrt{LotSize}$
+
+
+__C.  Plot the estimated regression line and the transformed data.  Does the regression line appear to be a good fit to the transformed data?__
+
+```{r}
+plot(x=df$LotSize, y=df$Hours, xlab="Lot Size", ylab="Production Time (Hours)")
+abline(result, col="red")
+```
+```{r}
+plot(x=sqrt(df$LotSize), y=df$Hours, xlab="SQRT(Lot Size)", ylab="Production Time (Hours)")
+abline(transformed_result, col="red")
+```
+
+
+The tranformed explanatory variable does appear be a slightly better linear relation variable than the untransformed version but it is difficult to assess the level of difference.  
+
+
+__D.  Obtain the residuals and plot them against the fitted values.  Also prepare a normal probability plot.  What do your plots show?__
+
+
+```{r, fig.height=3.6, fig.width=6}
+with(result, {
+     plot(x=fitted.values, y=residuals,
+          ylim=c(-max(residuals), max(residuals)),
+          xlab="Fitted Values", ylab="Residuals", main="No Tranformation")
+     
+     points(c(min(fitted.values), max(fitted.values)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+
+```
+
+
+```{r, fig.height=3.6, fig.width=6}
+with(transformed_result, {
+     plot(x=fitted.values, y=residuals,
+          ylim=c(-max(residuals), max(residuals)),
+          xlab="Fitted Values", ylab="Residuals", main="SQRT Transformation of Lot Size")
+     
+     points(c(min(fitted.values), max(fitted.values)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+
+```
+
+```{r, fig.height=3.6, fig.width=6}
+qqnorm(result$residuals, ylab="Residuals", main="No Transformation")
+qqline(result$residuals)
+```
+
+```{r, fig.height=3.6, fig.width=6}
+qqnorm(transformed_result$residuals, ylab="Residuals", main="SQRT Transformation")
+qqline(transformed_result$residuals)
+```
+
+
+
+```{r, fig.height=3.6, fig.width=6}
+hist(result$residuals, main="Distribution of Residuals - No Transformation", xlab="Residuals", 
+     breaks=20, col="grey")
+```
+
+
+```{r, fig.height=3.6, fig.width=6}
+hist(transformed_result$residuals, 
+     main="Distribution of Residuals - SQRT Transformation of Lot Size", xlab="Residuals", 
+     breaks=20, col="grey")
+```
+
+
+The plots show that the model that uses tranformed explanatory variable Lot Size is a better choice as it has more normality (better constancy of variance) of the residuals.   
+
+__E. Express the estimated regression function in the original units.__
+
+
+$Hours = 1.2547 + 3.6235 \sqrt{(Lot Size)}$

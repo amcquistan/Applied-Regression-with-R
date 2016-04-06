@@ -1,0 +1,76 @@
+---
+title: "Ch 6 Example - Dwaine Studio Sales"
+author: "Adam McQuistan"
+date: "Sunday, April 03, 2016"
+output: pdf_document
+---
+
+
+```{r, warning=FALSE}
+library("ggplot2")
+setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\ch 6")
+df <- read.csv("data/ch 6 sales.csv")
+df$id = NULL
+df <- with(df, data.frame(SALES, DispIncome, TargetPop))
+
+```
+
+
+##View General Linearity Plots Among Predictors and Outcome Vars
+
+```{r}
+pairs(df, pch=21)
+```
+
+Sales appears to have a linear relationship with the target population (individuals less than or equal to 16 yrs old) and the disploable income of the cities.  
+
+
+##Building the Model
+
+```{r}
+result <- lm(SALES ~ DispIncome + TargetPop, data=df)
+result_smry <- summary(result)
+F_stat <- round(as.numeric(result_smry$fstatistic["value"]),1)
+F_crit <- round(qf(0.95, df1=2, df2=result_smry$df[2]),1)
+result_smry
+```
+
+Analyze and test for the relatedness of sales to the target population and per capita disposable income.
+F critical is `r  F_crit`.
+
+$H_0: \beta_1 = 0$ and $\beta_2 = 0$ for F* <= F critical
+
+$H_a:$ not both $\beta_1$ and $\beta_2$ equal zero for F* > F critical
+
+Since F* ( `r F_stat` ) > F critical ( `r F_crit` ) we conclude that sales are related to target population and per capital income but, the usefullness of the model for making predictions have yet to be determined.
+
+
+The P-value is < 0.05 further indicating the rejection of $H_o$. 
+
+
+
+##Part C. Calculation coefficient of multople determination.
+
+The Multiple $R^2$ value is 0.9167 which translates into the model explaining about 92% of the variation in sales.  The Adjusted $R^2$ value of 0.9075 shows the correction for more than on predictor variable overfitting which is a very small change from the standard multiple r-squared value indicating little effects of overfitting. 
+
+To analyze and test the individual parameters of the regression model we use the students t-test such that:
+
+$H_0: \beta_p = 0$ indicating no relationship 
+
+$H_a:$ $\beta_p \neq 0$ indicating there is a relationship
+
+Since the p-values for both parameters (Disposable income and Target population) are less than 0.05 we conclude each individual parameter is significant and related to sales. 
+
+##Graphical Assessment of the Model (Residual Analysis)
+
+```{r}
+df_model <- result$model[,1:3]
+df_model$FittedVals <- result$fitted.values
+df_model$Residuals <- result$residuals
+
+plot(x=df_model$FittedVals, y=df_model$Residuals, xlab="Fitted Values", ylab="Residuals")
+
+plot(x=df_model$TargetPop, y=df_model$Residuals, xlab="Target Population", ylab="Residuals")
+
+plot(x=df_model$DispIncome, y=df_model$Residuals, xlab="Disposable Income", ylab="Residuals")
+```

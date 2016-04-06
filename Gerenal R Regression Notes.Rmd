@@ -1,0 +1,94 @@
+---
+title: "Regression Errors"
+author: "Adam McQuistan"
+date: "Monday, April 04, 2016"
+output: pdf_document
+---
+
+##Mean Square Error (MSE)
+
+Linear regression models assume a random variation between the predicted values and the actual values which are known as residuals, $\varepsilon$, with variance, $\sigma^{2}$, that is constant and independent and a mean (or expected value) of zero.
+
+The variance, $\sigma^{2}$ can be estimated by $s^{2}$ (MSE) as follows:
+
+###For Multiple Regression
+
+$MSE = \frac{ \sum \varepsilon ^{2}_i }{ n - p - 1 }; \varepsilon = \sum ( y_i - \hat{y}_i) $
+
+  or  
+  
+$MSE = \frac{ SSR } { p - 1 }$
+
+* p = explanatory variables (the count of them)
+* n = number of observations in the data
+* 1 is the intercept
+
+So, for a model,  $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2$, p = 2
+
+###For Simple Regression
+
+$MSE = \frac{ \sum \varepsilon ^{2}_i }{ n - 2 }; \varepsilon = \sum ( y_i - \hat{y}_i)$
+
+  or  
+  
+$MSE = \frac{ SSE } { n - 2 }$
+
+
+##Standard Error (SE)
+
+SE = $\sqrt{MSE}$
+
+##Regression Mean Square Error (MSR)
+
+###For multiple regression
+
+$$
+MSR = \frac{ \sum ( \hat{y}_i  - \bar{y} )^{2} } { p - 1 } = \frac{ SSR } { p - 1 }
+$$
+
+###For Simple Regression 
+$$
+MSR = \frac{ \sum ( \hat{y}_i  - \bar{y} )^{2} } { 1 } = \frac{ SSR } { 1 }
+$$
+
+
+##Total Sum of Squares (SST)
+* measures the the amount the observed responses vary from the average of all the observed responses which is basically the area of no relationship. 
+
+$$
+SST =  \sum ( y_i - \bar{y} )^{2} = \sum (  \hat{y}_i  - \bar{y} )^{2} +  \sum ( y_i  - \hat{y}_i )^{2}
+$$
+
+##Regression Sum of Squares (SSR)
+* Measures the amount of difference between the estimated regression line from the line of no relationship which is the average of the response variable. 
+
+$$
+SSR = \sum (  \hat{y}_i  - \bar{y} )^{2} 
+$$
+
+##Error Sum of Squares (SSE) / AKA Sum of Squared Residuals (RSS)
+* Measures the difference between the actual response to the predicted response, the error around the estimated regression line. 
+
+$$
+SSE = \sum ( y_i  - \hat{y}_i )^{2}
+$$
+
+
+##Anova Tables
+
+###For Multiple Regression
+
+| Source of Variation |  DF  | Sum of Sqr (SS) | Mean Sum Sqr (MS) | F Statistic |
+|---------------------|------|-----------------|-------------------|-------------|
+| Regression          | p-1  | SSR             | MSR               | MSR / MSE   |
+| Error               | n-p  | SSE             | MSE               |             |
+| Total               | n-1  | SST             |                   |             |
+
+
+###For Simple Regression
+
+| Source of Variation |  DF  | Sum of Sqr (SS) | Mean Sum Sqr (MS) | F Statistic |
+|---------------------|------|-----------------|-------------------|-------------|
+| Regression          |  1   | SSR             | MSR               | MSR / MSE   |
+| Error               | n-2  | SSE             | MSE               |             |
+| Total               | n-1  | SST             |                   |             |
