@@ -9,11 +9,6 @@ output: pdf_document
 * Do not do part (b)
 
 
-```{r, echo=FALSE}
-setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\Exam 2")
-```
-
-
 ##Part A. Test whether there is a regression relation, use alpha = 0.10.  State alternative and decision rules.  What does the test imply about the predictors and their usefullness?
 
 

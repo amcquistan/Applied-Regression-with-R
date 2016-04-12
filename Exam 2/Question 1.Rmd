@@ -6,11 +6,6 @@ output: pdf_document
 ---
 
 
-```{r, echo=FALSE}
-setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\Exam 2")
-```
-
-
 #Problem 1 - Do problem 6.15 on page 250.
 * Do not do part (a)
 * Do parts (b-g)
@@ -61,9 +56,34 @@ $\beta_2$ (Severity) has a coefficient of -0.44 which means that as severity inc
 ##D. Obtain the residuals and prepare a boxplot.  Are there any outliers.
 
 ```{r, fig.width=6, fig.height=4}
+library(knitr)
+iqr <- IQR(result$residuals)
+smry <- summary(result$residuals)
+smry <- t(as.matrix(smry, nrow=1))
+smry <- data.frame(smry)
+names(smry) = c("Min", "FirstQtr", "Median", "Mean", "ThirdQtr", "Max")
+smry <- cbind(smry, 
+              Low1.5xIQR=(smry$FirstQtr - (1.5 * iqr)),
+              Uppr1.5xIQR=(smry$ThirdQtr + (1.5 * iqr)),
+              Low3xIQR=(smry$FirstQtr - (3 * iqr)),
+              Uppr3xIQR=(smry$ThirdQtr + (3 * iqr)))
+smry <- round(smry, 3)
+kable(smry)
 boxplot(result_smry$residuals, horizontal=T)
 hist(result_smry$residuals, breaks=12)
 ```
+
+
+| Outlier       | Definition          |
+|---------------|---------------------|
+| Lower Mild    | 1st Qtr - 1.5 x IQR |
+| --------------|---------------------|
+| Upper Mild    | 3rd Qtr + 1.5 x IQR |
+|---------------|---------------------|
+| Lower Extreme | 1st Qtr - 3 x IQR   |
+|---------------|---------------------|
+| Upper Extreme | 3rd Qtr + 3 x IQR   |
+
 
 There does not appear to be outliers in the box plot but the histogram shows a non normal distribution of residuals.
 
@@ -180,47 +200,12 @@ df_levels <- as.data.frame(df_tbl_levels)
 kable(df_levels)
 ```
 
-Since there is only one repeating group of the three predictors we'll need to create artificial repeating groups that are close to each other. Predictor values will be grouped by equal fifths which will increase the number of similar groups the three predictors will fall into. 
 
-
-
-```{r}
-smoother <- function(x){
-  groups <- quantile(x, probs=seq(0,1,0.2))
-  groups <- as.numeric(groups)
-  for(i in 1:length(x)){
-    lower_idx <- max(which(as.numeric(groups) <= x[i]))
-    upper_idx <- lower_idx + 1  
-    mp <- ifelse(lower_idx == length(groups), 
-              (groups[lower_idx-1] + groups[lower_idx]) / 2,
-              (groups[lower_idx] + groups[upper_idx]) / 2)
-    x[i] <- mp
-  }
-  return(x)
-}
-
-
-df$AgeSmooth <- smoother(df$Age)
-df$SeveritySmooth <- smoother(df$Severity)
-df$AnxietySmooth <- smoother(df$Anxiety)
-
-df$CommonPredictors <- with(df,paste(
-  as.character(AgeSmooth),
-  as.character(SeveritySmooth),
-  as.character(AnxietySmooth),
-  sep="-"))
-
-df_tbl <- tbl_df(df)
-df_tbl_levels <- group_by(df_tbl, CommonPredictors) %>% summarize(LevelRepeats=n()) %>% arrange(LevelRepeats)
-df_levels <- as.data.frame(df_tbl_levels)
-kable(df_levels)
-```
-
-This method reduced the number of distinct levels from 46 to 34 which should be enough to allow for a decent lack of fit test. 
+There is one repeating set of rows for values Age-Severity-Anxiety of 40-48-2.2 so yes you can do a lack of fit test.  
 
 ```{r}
-reduced <- lm(Satisfaction ~ AgeSmooth + SeveritySmooth + AnxietySmooth, data=df)
-full <- lm(Satisfaction ~ factor(AgeSmooth) + factor(SeveritySmooth) + factor(AnxietySmooth), data=df)
+reduced <- lm(Satisfaction ~ Age + Severity + Anxiety, data=df)
+full <- lm(Satisfaction ~ factor(Age) + factor(Severity) + factor(Anxiety), data=df)
 anova(reduced, full)
 ```
 

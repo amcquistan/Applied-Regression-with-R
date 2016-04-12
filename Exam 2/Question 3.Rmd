@@ -6,15 +6,66 @@ output: pdf_document
 ---
 
 #Problem 3 - Do problem 6.18 on page 252.
-* Only do parts (e-g). 
+* Only do parts (c-g). 
 * For part (g) do either Levene or Pagan test
+
+##Part C. Fit the regerssion model for the listed predictors below and state the estimated regression equation.
+
+* Y (Rental Rates)
+* X1 (Age)
+* X2 (Operating Expense and Taxes)
+* X3 (Vacancy Rate)
+* X4 (Square Footage)
+
+```{r}
+options(scipen=999)
+df <- read.csv("data/6.18.csv")
+result <- lm(Rental ~ Age + Expense + Vacancy + Footage, data=df)
+result_smry <- summary(result)
+result_smry
+```
+
+$$
+Rate = 12.2 - 0.142(Age) + 0.282(Expense) + 0.619(Vacancy) + 0.000008(Footage)
+$$
+
+
+##Part D. Make and interpret box plot
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+iqr <- IQR(result$residuals)
+smry <- summary(result$residuals)
+smry <- t(as.matrix(smry, nrow=1))
+smry <- data.frame(smry)
+names(smry) = c("Min", "FirstQtr", "Median", "Mean", "ThirdQtr", "Max")
+smry <- cbind(smry, 
+              Low1.5xIQR=(smry$FirstQtr - (1.5 * iqr)),
+              Uppr1.5xIQR=(smry$ThirdQtr + (1.5 * iqr)),
+              Low3xIQR=(smry$FirstQtr - (3 * iqr)),
+              Uppr3xIQR=(smry$ThirdQtr + (3 * iqr)))
+smry <- round(smry, 3)
+kable(smry)
+boxplot(result$residuals, horizontal=T)
+```
+
+| Outlier       | Definition          |
+|---------------|---------------------|
+| Lower Mild    | 1st Qtr - 1.5 x IQR |
+| --------------|---------------------|
+| Upper Mild    | 3rd Qtr + 1.5 x IQR |
+|---------------|---------------------|
+| Lower Extreme | 1st Qtr - 3 x IQR   |
+|---------------|---------------------|
+| Upper Extreme | 3rd Qtr + 3 x IQR   |
+
+
+There are mild lower outliers and mild upper outliers. Fifty percent of the data is between the first and third quartiles.  Overall, it is mildly skewed to the right. 
+
 
 ##Part E. Plot Residuals vs Predicted Values, Vs each explanatory variable, vs each two factor ineraction term on separate plots.  Prepare a normal probability plot of the residuals.  Analyze and state your findings.
 
 ```{r}
-df <- read.csv("data/6.18.csv")
-result <- lm(Rental ~ Age + Expense + Vacancy + Footage, data=df)
-result_smry <- summary(result)
 df_model <- result$model[, 1:5]
 df_model$Residuals <- result_smry$residuals
 df_model$PredictedVals <- result$fitted.values
@@ -192,65 +243,8 @@ txt = paste("Total Instances ", n, "  Unique Instances ", m, "\n", sep="")
 cat(txt, sep="")
 ```
 
-A smoothing of predictor variables will need to be conducted so that repeat combinations are available for the lack of fit test. 
+No because there are not atleast two repeating rows of predictor variabel data. 
 
-```{r}
-
-smoother <- function(x){
-  groups <- quantile(x, probs=seq(0,1,0.2))
-  groups <- as.numeric(groups)
-  for(i in 1:length(x)){
-    lower_idx <- max(which(as.numeric(groups) <= x[i]))
-    upper_idx <- lower_idx + 1  
-    mp <- ifelse(lower_idx == length(groups), 
-              (groups[lower_idx-1] + groups[lower_idx]) / 2,
-              (groups[lower_idx] + groups[upper_idx]) / 2)
-    x[i] <- mp
-  }
-  
-  return(x)
-}
-
-df_model$SmoothAge <- smoother(df_model$Age)
-df_model$SmoothExpense <- smoother(df_model$Expense)
-df_model$SmoothVacancy <- smoother(df_model$Vacancy)
-df_model$SmoothFootage <- smoother(df_model$Footage)
-
-df_model$CommonLevels <- with(df_model, 
-                              paste(SmoothAge, 
-                                    SmoothExpense,
-                                    SmoothVacancy,
-                                    SmoothFootage, sep=""))
-m <- length(unique(df_model$CommonLevels))
-txt = paste("Total Instances ", n, "  Unique Instances ", m, "\n", sep="")
-cat(txt, sep="")
-```
-
-This should give enough repeating groups to allow for a lack of fit test. 
-
-
-```{r}
-reduced <- lm(Rental ~ SmoothAge + SmoothExpense + SmoothVacancy + SmoothFootage
-              , data=df_model)
-
-full <- lm(Rental ~ 0 + factor(SmoothAge) + factor(SmoothExpense) + factor(SmoothVacancy) + factor(SmoothFootage), data=df_model)
-
-anova(reduced, full)
-
-```
-
-The anova of the reduced verse full model is used to assess the appropriateness (fittness) of the model:
-
-$H_o: E\left \{ Y \right \} = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3  x_3 + \beta_4 x_4$ 
-* Concludes that the regression function is linear where p-value > 0.05
-
-$H_a: E\left \{ Y \right \} \neq \beta_0 + \beta_1 X_1  + \beta_2 X_2 + \beta_3  x_3 + \beta_4 x_4$
-* Concludes that there is a lack of linear fit where p-value <= 0.05
-
-Since p-value > 0.05 we do not reject the null hypothesis, the model appears adequate
-
-
- 
 
 ##Part G. Conduct a levene test for constant variance of the different groups.
 
