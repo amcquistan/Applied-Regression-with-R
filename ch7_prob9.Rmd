@@ -1,0 +1,69 @@
+---
+title: "Ch 7 P9"
+author: "Adam McQuistan"
+date: "Monday, April 18, 2016"
+output: pdf_document
+---
+
+
+
+#Ch 7 Problem 9 - Patient Satisfaction Data.  Test if b1 = -1.0 and b2 = 0. Use alpha = 0.025.
+
+```{r}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+
+df <- read.csv("patient_satisfaction.csv")
+
+full <- lm(Y ~ X1 + X2 + X3, data=df) 
+full_aov <- fullRegressionAnova(anova(full)) 
+
+df$Yc <- df$Y + df$X1
+
+reduced <- lm(Yc ~ X3, data=df)  
+reduced_aov <- fullRegressionAnova(anova(reduced))  
+
+SSE_full <- full_aov[5,3]
+degFreedom_full <- full_aov[5,2]
+
+SSE_red <- reduced_aov[3,3]
+degFreedom_red <- reduced_aov[3,2]
+
+num <- (SSE_red - SSE_full) / 2
+den <- SSE_full / degFreedom_full
+
+F_stat <- num / den
+F_crit <- qf(0.975, 2, 42)
+
+msg <- paste("F* = ", F_stat, "\n",
+             "F crit = ", F_crit, sep="")
+cat(msg)
+```
+
+
+Full Model: $Y = \beta_0 + \beta_1 X_1 + \beta_2 X _2 + \beta_3 X_3 + \epsilon$
+
+Reduced Model: $Y + X_1 = \beta_0 + \beta_3 X_3 + \epsilon$
+
+$H_o: \beta_1 = -1.0, \beta_2 = 0$
+
+$H_a:$ not both equalities hold
+
+If F* $\leq{F crit}$ conclude $H_o$
+
+Answer: conclude $H_a$
