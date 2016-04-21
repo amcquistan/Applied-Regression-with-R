@@ -28,7 +28,8 @@ output: pdf_document
 
 # Introduction
 
-This breif communication assesses the use of linear models to predict the productivity of software development teams in the early 2000s.  The data set under study is provided in the appendix of Kutner, Nachtsheim, and Neter's book Applied Linear Regression Models and describes the productivity of software development teams for consulting company over the years of 2001 and 2002.  The variables collecticed in the study are listed in table 1. 
+This breif communication assesses the use of linear models to predict the productivity of software development teams in the early 2000s.  The data set under study is provided in the appendix of Kutner, Nachtsheim, and Neter's book Applied Linear Regression Models and describes the productivity of software development teams for a consulting company over the years of 2001 and 2002.  The variables collecticed in the study are listed in table 1. 
+
 
 | Variable |  Type       |                Description                 |
 |----------|-------------|--------------------------------------------|
@@ -41,6 +42,63 @@ This breif communication assesses the use of linear models to predict the produc
 | quarter  | categorical | lable of the quarter in of the project     |
 
 
+# Overview
+
+To predict the productivity a statistical method known as regression will be used and implemented in the R statistical programming language.  Linear regression is an analytical technique used to model relationships between one or more input (dependent) variables and a continuous outcome variable with the key assumption that the relationship between the dependent variables and the outcome variables are linear [1].  It is common to use transformations on the outcome or dependent variables to acheive linearity [2].  The resulting linear regression model is a probabilistic one that accounts for randomness and factors not included in the building of the model [1].  Therefore, the model is used to find the expected value of the outcome variable based off the input variables and comes with some level of uncertainty.
+
+
+Regression is very common and powerful statistical tool for learning interesting things about a particular data set in a way that lends to simple interpretation of the end result.  However, it is important that your model does not violate the fundamental  assumptions described previously in order to build a reliable or robust regression model.  If fact, if one is not careful in their approach you can easily build a misleading model.
+
+
+##Model Description
+
+$$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + ... + \beta_{p-1} x_{p-1} + \varepsilon$$
+
+  * y is the outcome variable
+  * $x_j$ are the input variables for j=1,2,...,p-1
+  * $\beta_0$ is the value of y where each $x_j$ equals zero
+  * $\beta_j$ is the change in y based on one unit change in $x_j$ for j=1,2,...,p-1
+  * $\varepsilon \sim N(0,\sigma^2)$ is a random error term that represents the difference in the linear model and the observed value of y.  The assumption is that the mean of the error term is zero and each $\varepsilon$ is independent of each other and normally distributed. The assumption of normal distribution in the error term (residuals) allows for hypothesis testing and confidence interval estimation [1]. 
+
+
+
+
+# Data Analysis
+
+## Getting to Know the Data
+
+```{r}
+# Read dataset into dataframe
+df <- read.table(file="WebDevelopment.txt", sep="\t", header=T)
+
+# view initial structure of data
+str(df)
+
+# remove the id variable from dataset
+df$id <- NULL
+
+# recode categorical values as factors
+df$team <- as.factor(df$team)
+df$process <- as.factor(df$process)
+df$year <- as.factor(df$year)
+df$quarter <- as.factor(df$quarter)
+
+# view recoded data set
+str(df)
+
+summary(df)
+```
+
+As shown above the data has now been recoded to include the appropriate data types and is ready for futher analysis.
+
+## Checking for Linearity of Variables
+
+```{r, echo=FALSE}
+
+```
+
+
+# Result
 
 
 
@@ -51,13 +109,13 @@ This breif communication assesses the use of linear models to predict the produc
 
 
 
+\clearpage
 
+# References
 
+1. EMC Education Services. Data Science and Big Data Analytics. (2015).  Wiley Publishing. 
 
-
-
-
-
+2. Kutner,  Nachtsheim, and Neter,  Applied Linear Regression Models. (2004). The McGraw-Hill Companies.4th Edition.
 
 
 
