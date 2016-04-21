@@ -1,0 +1,83 @@
+---
+title: "Predicting Software Project Delivery"
+output: pdf_document
+---
+
+
+\centering
+
+![](img/UNO.png)
+
+#ISQA 8340 - Applied Regression
+###Adam McQuistan
+
+\raggedright
+
+\clearpage
+
+# Contents
+
+## Introduction and Overview .................. 2
+
+## Result and Analysis ......................... 3
+
+## Conculsion .................................. 4
+
+
+\clearpage
+
+# Introduction
+
+This breif communication assesses the use of linear models to predict the productivity of software development teams in the early 2000s.  The data set under study is provided in the appendix of Kutner, Nachtsheim, and Neter's book Applied Linear Regression Models and describes the productivity of software development teams for consulting company over the years of 2001 and 2002.  The variables collecticed in the study are listed in table 1. 
+
+| Variable |  Type       |                Description                 |
+|----------|-------------|--------------------------------------------|
+| count    | ratio       | count of website produced in a quarter     |
+| backlog  | ratio       | count of projects in backlog               |
+| team     | categorical | team label                                 |
+| team_exp | ratio       | number of month team has worked together   |
+| process  | categorical | label of project methodology or process    |
+| year     | categorical | label of the year 2001 or 2002 for project | 
+| quarter  | categorical | lable of the quarter in of the project     |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
