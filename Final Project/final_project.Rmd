@@ -17,18 +17,18 @@ output: pdf_document
 
 # Contents
 
-## Introduction and Overview .................. 2
+## Introduction and Overview ....................... 3
 
-## Result and Analysis ......................... 3
+## Analysis ...................................... 4-10
 
-## Conculsion .................................. 4
+## Results and Conculsion ......................... 11
 
 
 \clearpage
 
 # Introduction
 
-This breif communication assesses the use of linear models to predict the productivity of software development teams in the early 2000s.  The data set under study is provided in the appendix of Kutner, Nachtsheim, and Neter's book Applied Linear Regression Models and describes the productivity of software development teams for a consulting company over the years of 2001 and 2002.  The variables collecticed in the study are listed in table 1. 
+This breif communication assesses the use of linear models to predict the productivity of software development teams in the early 2000s.  The data set under study is provided in the appendix of Kutner, Nachtsheim, and Neter's book Applied Linear Regression Models and describes the productivity of software development teams for a consulting company over the years of 2001 and 2002.  The variables collecticed in the study are listed in table 1. Count is the number of website produced by team per quarter over the years 2001 and 2002.  Backlog is the number of projects to be completed at the start of each quarter. Team is a categorical variable used to represent the 13 different teams under study. Team experience is the number of months the team had been working together by the end of the quarter. Process is a categorical variable representing two different software development methods that were used over the two years.  It is important to note that in the second quarter of year 2002 a new software development method was enacted company wide. Year is a categorical variable for the two years of the study. 
 
 
 | Variable |  Type       |                Description                 |
@@ -37,9 +37,9 @@ This breif communication assesses the use of linear models to predict the produc
 | backlog  | ratio       | count of projects in backlog               |
 | team     | categorical | team label                                 |
 | team_exp | ratio       | number of month team has worked together   |
-| process  | categorical | label of project methodology or process    |
-| year     | categorical | label of the year 2001 or 2002 for project | 
-| quarter  | categorical | lable of the quarter in of the project     |
+| processA | categorical | 1 for process A, 0 for process B           |
+| year2001 | categorical | 1 for 2001 and 0 for 2002                  | 
+
 
 
 # Overview
@@ -67,40 +67,145 @@ $$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + ... + \beta_{p-1} x_{p-1} + \varepsi
 
 ## Getting to Know the Data
 
-```{r}
+```{r, echo=FALSE}
 # Read dataset into dataframe
 df <- read.table(file="WebDevelopment.txt", sep="\t", header=T)
-
-# view initial structure of data
-str(df)
 
 # remove the id variable from dataset
 df$id <- NULL
 
 # recode categorical values as factors
 df$team <- as.factor(df$team)
-df$process <- as.factor(df$process)
-df$year <- as.factor(df$year)
-df$quarter <- as.factor(df$quarter)
 
-# view recoded data set
-str(df)
+```
 
+
+
+```{r}
+# view dataset
 summary(df)
 ```
 
-As shown above the data has now been recoded to include the appropriate data types and is ready for futher analysis.
+As shown above the data has now been recoded to include the appropriate data types and is ready for futher analysis.  The team categorical variable has been coerced into a factor to avoid creating a series of dumby variables. 
 
 ## Checking for Linearity of Variables
 
 ```{r, echo=FALSE}
+pairs(df)
+```
 
+The scatterplot matrix plot is a useful tool for looking for linear relationship among the variables in a data set under investigation. Below is a table describing the relationships between the predictor and outcome variables. 
+
+| Variable |                Description                                       |
+|----------|------------------------------------------------------------------|                
+| backlog  | appears to be weakly positively linear with count                |
+| team     | Difficult to tell due to the many different (13) team categories |
+| team_exp | appears to be weakly positively linear with count                |
+| processA | appears to be positively linear with process A more productive   |
+| year2001 | appears linear with year 2001 being less productive              | 
+
+
+
+## Fitting the full Model
+
+$$count = \beta_0 + \beta_1 backlog + \beta_2 team + \beta_3 team_exp + \beta_4 process + \beta_5 year + \beta_6 quarter + \varepsilon$$
+
+
+```{r, echo=FALSE}
+result1 <- lm(count ~ backlog + team + team_exp + processA + year2001, data = df)
+summary(result1)
+```
+
+The call to the summary function of the lm object displays the following:
+
+* Summary statistics of residuals
+* the OLS estimate of $\beta_j$ coefficients of the model
+* Error estimates and associated p values to assess statistical significance of the parameters based of t-tests where:
+ + $H_o : \beta_j = 0 \hspace{0.25cm} where \hspace{0.25cm} p-value > 0.05$
+ + $H_a : \beta_j <> 0 \hspace{0.25cm} where \hspace{0.25cm} p-value \leq{0.05}$
+* Multiple R-squared tells the proportion of variance in the outcome variable explained by the model
+* Adjusted R-squared is a more robust version of R-squared that accounts for overfitting by adding variables
+* F-statistic and p-value which assesses the statistical significance of the model as a whole 
+ + $H_o : \beta_1 = \beta_2 = ... = \beta_{p-1} = 0 \hspace{0.25cm} where p-value > 0.05$
+ + $H_a : \beta_j <> for \hspace{0.25cm} atleast \hspace{0.25cm} one \hspace{0.25cm} j=1,2,...,p-1 \hspace{0.25cm} where \hspace{0.25cm} p-value \hspace{0.25cm} \leq{0.05}$
+
+
+A rough look at the initial t-tests of the full model leads me to believe that there are differences in productivity among the teams.  Teams 5, 7, 8, and 9 appear to have a statistically significant impact on productivity.  However, the team experience as a whole does not appear to significant for the model.  I am a bit skeptical of this because it seams like teams that have more experience working together should be more productive so, I would like to view the months of experience for each team to see if the teams with significant impact in the model all have appreciably more experience than the others. I will do so with a dotchart.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+df_tbl <- tbl_df(df)
+team_productivity <- select(df_tbl, count, team) %>% group_by(team) %>% summarize(av_cnt = mean(count))
+
+team_exp_smry <- select(df_tbl, team, team_exp) %>% group_by(team) %>% summarize(av_exp = mean(team_exp))
+
+team_smry <- inner_join(team_productivity, team_exp_smry, by="team")
+```
+
+```{r, echo=FALSE, fig.height=3.8}
+dotchart(team_smry$av_exp, labels=team_smry$team, cex=0.7, xlab="Average Months Experience", ylab="Team", main="Team vs Experience")
 ```
 
 
-# Result
+```{r, echo=FALSE, fig.height=3.8}
+dotchart(team_smry$av_cnt, labels=team_smry$team, cex=0.7, xlab="Average Projects Finished Per Quarter", ylab="Team", main="Team vs Productivity")
+```
+
+The plots show that teams 1-5 have the most experience but, they have relatively low productivity.  Also, it does not appear that the average months experience for the significant teams are customering or significantly different from the others.  With this information I think it is safe to remove the team experience variable from the model. 
 
 
+## Fitting the Model without Team Experience
+
+$$count = \beta_0 + \beta_1 backlog + \beta_2 team + \beta_3 process + \beta_4 year + \beta_5 quarter + \varepsilon$$
+
+
+```{r, echo=FALSE}
+result2 <- lm(count ~ backlog + team + processA + year2001, data = df)
+summary(result2)
+```
+
+Note that the R squared value changed very little between the two models which further lend to the argument that team experience had any effect on the model.  It is still worth noting that the only other quantitative variable, backlog count, has no statistical effect on the model with a pvalue of 0.4615 which tells me it too should be removed from the model.  At this point all the variables are categorical the use of linear regression for predicting productivity is probably no longer appropriate. 
+
+However, it should be noted that it is apparent that the new process enacted in the second year has a significant possitive effect on the productivity of the model.  Another interesting aspect of the data set to examine will be whether the overall productivity of the teams smoothed out when the company switched to the new process.  To do this I will analyze only the data collected on the teams using the new process. 
+
+## Analyzing New Process Data
+
+```{r, echo=FALSE}
+processNew <- df[df$processA == 1,] # this is the new process
+processNew$processA <- NULL
+processNew$year2001 <- NULL
+resultNew <- lm(count ~ ., data=processNew)
+summary(resultNew)
+```
+
+The pvalues for the model's $\beta_j$ parameters are now showing that the team experience variable is significant at $\alpha = 0.05$ and now the only teams that are not significant are teams 13, 10, 1, 2, 3 and 4.  Backlog still is not significant and should be dropped.  The results indicate that for this data set the teams appear to have similar significance on the relationship on productivity but it is not an appropriate dataset for linear regression. I will again look for a recognizable relationship between the teams with significant effects on the model to months experience. 
+
+```{r, echo=FALSE}
+df_tbl <- tbl_df(processNew)
+team_productivity <- select(df_tbl, count, team) %>% group_by(team) %>% summarize(av_cnt = mean(count))
+
+team_exp_smry <- select(df_tbl, team, team_exp) %>% group_by(team) %>% summarize(av_exp = mean(team_exp))
+
+team_smry <- inner_join(team_productivity, team_exp_smry, by="team")
+```
+
+```{r, echo=FALSE, fig.height=3.8}
+dotchart(team_smry$av_exp, labels=team_smry$team, cex=0.7, xlab="Average Months Experience", ylab="Team", main="Team vs Experience")
+```
+
+
+```{r, echo=FALSE, fig.height=3.8}
+dotchart(team_smry$av_cnt, labels=team_smry$team, cex=0.7, xlab="Average Projects Finished Per Quarter", ylab="Team", main="Team vs Productivity")
+```
+
+Again, there is not a clear relationship between the statistially significant teams and the average months of experience for a given team.
+
+
+# Result and Conclusion
+
+The results of this regression analysis indicate that the new process for software development enacted in the second year (year 2002) had the most significant impact on quarterly project productivity.  The reduced model where months of experience is removed shows that the effect of switching to the new process resulted in an increase of about 9 completed projects a quarter where all other variables are held constant. 
+
+Analysis of the data collected for only the new process resulted in a reduced dataset of 73 orginal observations to just 26 observations. Removing the extreme variation introducted by the new process showed that there was less variation among the individual teams and a greater significance on the months of experience for teams and the impact on productivity.  However, due to the large number of different number of team categories and lack of significant quantitative variables using a linear regression techique is limited in the ability to draw additional significant conclusions for this data set. Perhaps a more appropriate method of analysis would be done using design of experiment or other multivariate techniques. 
 
 
 
