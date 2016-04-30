@@ -1,0 +1,81 @@
+---
+title: "Ch 8 - Insurance Innovation Example"
+author: "Adam McQuistan"
+date: "Saturday, April 30, 2016"
+output: pdf_document
+---
+
+# Innovation Adoption Among Insurance Companies
+
+| Variable | Meaning of Variable                                                                         |
+|----------|---------------------------------------------------------------------------------------------|
+| Y        | Months elapsed for a insurance firm to adopt a new technology relative to the first adopter |
+| X1       | Quantitative variable.  Size of firm in total assets valuation.                             |
+| X2       | Qualitative variable.  Type of firm, 1 for stock company and 0 for mutual company.          |
+
+Purose of the analysis is to determine if a regression model is appropriate for predicting the adoption rate of innovation among insurance companies where the outcome variable is number of months elapsed between the company being investigated and the first adopter. 
+
+__The regression model:__
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \varepsilon$$
+
+# Data Preparation
+
+The dataset from the Kutner, Nachtsheim, and Neter textbook requires some initial preparation in order for it to be useful for model building and analysis. 
+
+```{r, message=FALSE, warning=FALSE}
+# Original file has weird double space delimiting and starts with a double space.  
+# Lets trim this up and build three vectors: Y, X1 and, X2
+
+lines <- readLines("CH08TA02.txt")
+Y <- vector()
+X1 <- vector()
+X2 <- vector()
+
+library(gdata)
+for(line in lines){
+  line <- trim(line)
+  lineAry <- unlist(strsplit(line, "  "))
+  Y <- c(Y, lineAry[1])
+  X1 <- c(X1, lineAry[2])
+  X2 <- c(X2, lineAry[3])
+}
+
+df <- data.frame(Y=as.numeric(Y),
+                 X1=as.numeric(X1), 
+                 X2=factor(X2, levels=c(0,1), labels=c("Mutual", "Stock")))
+
+str(df)
+summary(df)
+```
+
+# Plots of Both Company Types
+
+```{r, warning=FALSE, message=FALSE}
+library(car)
+scatterplot(Y ~ X1 | X2, data=df,
+            ylab="Months Until Adoption",
+            xlab="Firm Size")
+```
+
+Notice that the line for the stock company is above the line for the mutual type of company.  This indicates that the stock companies are generally slower to adopt innovation when compared to mutual companies within the companies represented in this dataset. 
+
+# Fitting the Model
+
+```{r}
+result1 <- lm(Y ~ X1 + X2, data=df)
+result1_smry <- summary(result1)
+print(result1_smry)
+confint(result1, level=0.95)
+```
+
+From the summary output we can see that the stock companies are generally about 8 months slower to adopt innovation compared to the mutual companies.  Based on the data and analysis we conclude that 95% confidence stock companies tend to adopt innovation between approximately 5 to 11 months slower than mutual companies. 
+
+
+The formal test for significance of firm type would be:
+
+$H_o: \beta_2 = 0$
+
+$H_a: \beta_2 \neq{0}$
+
+since the interval does not include zero we conclude $H_a$ that firm type has an effect on innovation adoption. Also, the p-value for the t-test in the summary output is significantly less than 0.05.
