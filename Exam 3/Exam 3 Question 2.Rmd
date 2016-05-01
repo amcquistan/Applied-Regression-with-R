@@ -1,0 +1,198 @@
+---
+title: "Exam 3 - Question 2"
+author: "Adam McQuistan"
+date: "Sunday, May 01, 2016"
+output: pdf_document
+---
+
+# Problem 2 - 8.37
+
+For this problem Y is total serious crime divided by total population (X9 / X4), $X_1$ will be population density (X4 / X3) and, $X_2$ will be unemployment rate (X13). 
+
+The dataset
+
+| Variable | Description                                             |
+|----------|---------------------------------------------------------|
+| X1       | County                                                  |
+| X2       | State                                                   |
+| X3       | Land area                                               |
+| X4       | Population                                              |
+| X5       | Percent of population 18-34                             |
+| X6       | Percent of population older than 65                     |
+| X7       | Number of physicians                                    |
+| X8       | Number of hospital beds                                 |
+| X9       | Total serious crimes                                    |
+| X10      | Percent highschool graduates                            |
+| X11      | Percent bachelors degrees                               |
+| X12      | Percent below poverty level                             |
+| X13      | Percent unemployment                                    |
+| X14      | Per capita income                                       |
+| X15      | Total personal income                                   |
+| X16      | Geographic region                                       |
+
+
+```{r}
+df <- read.csv(file="data/8.37.csv")
+df$Y <- df$X9 / df$X4; df$X_1 <- df$X4 / df$X3; df$X_2 <- df$X13
+summary(df[,c("Y","X_1", "X_2")])
+```
+
+## Part A
+
+Fit a second-order regression model.  Plot the residuals against the fitted values.  How well does the model appear to fit the data?  What is R squared?
+
+__The Model__
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_{11} X_{1}^{2} + \beta_{22} X_{2}^{2} + \beta_{12} X_1 X_2 + \varepsilon$$
+
+
+```{r, echo=FALSE}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+### First the inputs need to be centered to aleviate effects of multi-collinearity__
+
+```{r}
+X_1_bar <- mean(df$X_1); X_2_bar <- mean(df$X_2)
+df$X_1_cent <- df$X_1 - X_1_bar; df$X_2_cent <- df$X_2 - X_2_bar
+result1 <- lm(Y ~ X_1_cent + X_2_cent + I(X_1_cent^2) + I(X_2_cent^2) + I(X_1_cent * X_2_cent), 
+              data=df)
+result1_smry <- summary(result1); print(result1_smry)
+result1_aov <- fullRegressionAnova(anova(result1))
+```
+
+### Correlation Among the Predictor Terms
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+Terms = c("X_1 and X_1 Sqr","x_1_cent and x_1_cent Sqr", 
+          "X_2 and X_2 Sqr", "x_2_cent and x_2_cent Sqr")
+Correlations = c(cor(df$X_1, df$X_1^2), cor(df$X_1_cent, df$X_1_cent^2),
+                 cor(df$X_2, df$X_2^2), cor(df$X_2_cent, df$X_2_cent^2))
+Correlations <- round(Correlations, 3)
+cor_df <- data.frame(Terms, Correlations); kable(cor_df)
+```
+
+Note that the correlations between the centered data is less than the uncentered data. 
+
+### Test of Fit
+
+To determine if a lack of fit test can be used we'll search the data for replicates among the data. 
+
+```{r}
+df$Terms <- paste(as.character(df$X_1_cent),as.character(df$X_2_cent),
+                  as.character(df$X_1_cent^2),as.character(df$X_2_cent^2))
+n <- dim(df)[1]; categories <- length(unique(df$Terms))
+cat("Total Records ", n, "\nDistinct Categories ", categories, sep="")
+```
+
+Since there are not replicates a formal lack of fit test cannot be performed. 
+
+### Residual Plots
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+df$Residuals <- result1$residuals; df$PredictedVals <- result1$fitted.values
+with(df, {
+     plot(x=PredictedVals, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Predicted Values", ylab="Residuals", main="")
+     points(c(min(PredictedVals), max(PredictedVals)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+with(df, {
+     plot(x=X_1_cent, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="X_1 Centered", ylab="Residuals", main="")
+     points(c(min(X_1), max(X_1)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+with(df, {
+     plot(x=X_2_cent, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="X_2 Centered", ylab="Residuals", main="")
+     points(c(min(X_2), max(X_2)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+### Q-Q Normality Plot
+
+```{r, fig.height=3.6, fig.width=6, echo=FALSE}
+qqnorm(result1$residuals, ylab="Residuals", main=""); qqline(result1$residuals)
+```
+
+### Answer
+The residual plots suggest that there is equal variance among the error terms and the model is appropriate for the data. The R squared value is 0.2485 and the adjusted R squared is 0.2398
+
+## Part B
+
+Test whether or not all quadratics and interaction terms can be dropped from the regression model. Use $\alpha$ = 0.01.  
+
+$H_o: \beta_{11} = \beta_{22} = \beta_{12} = 0$
+
+$H_a$: Not all $\beta_{s}$ in $H_o$ equals 0
+
+F stat = SSR($X_{1}^{2}, X_{2}^{2}, X_{12}|X_{1}, X_{2}$) / 3 / MSE
+
+F crit = F(0.99, 3, 5)
+
+If F Stat < F crit, conclude $H_o$
+
+If F Stat >= F crit, conclude $H_a$
+
+```{r}
+F_crit <- qf(0.99, 3, 5)
+SSR <- sum(result1_aov$SS[4:6])
+MSE <- result1_aov$MS[7]
+F_stat <- SSR / 3 / MSE
+msg = paste("F stat = ", F_stat, "\nF crit = ", F_crit)
+result <- ifelse(F_stat < F_crit, 
+                 "\nConclude Ho, no curvature interaction effects are needed.", 
+                 "\nConclude Ha, curvature interaction effects are significant.")
+cat(msg, result, sep="")
+```
+
+### Answer
+
+As the output suggests there $H_o$ appears to be appropriate meaning that no curvature interactions are needed. 
+
+## Part C
+
+### Fitting The Model with Population, Land Area, and Unemployment Rate
+
+```{r}
+result2 <- lm(Y ~ X4 + I(X4^2) + X3 + X13, data = df)
+summary(result2)
+```
+
+The R squared value is 0.1444 and the adjusted R squared is 0.1365.  
+
+Since the above section proved that a quadratic effect is not required lets compare this to the first order model.  
+
+```{r}
+result3 <- lm(Y ~ X_1 + X_2, data=df)
+summary(result3)
+```
+
+## Answer
+
+For the model with population, land area, and unemployment rate the R squared value is 0.1444 and the adjusted R squared is 0.1365.   Comparing that the first order model from part A-B we see that it actually explains less of the variation but both are pretty low R squared values. 
