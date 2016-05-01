@@ -1,0 +1,111 @@
+---
+title: "Ch 8 - Soap Production Lines Example"
+author: "Adam McQuistan"
+date: "Saturday, April 30, 2016"
+output: pdf_document
+---
+
+
+# The dataset
+
+| Variable | Description                                             |
+|----------|---------------------------------------------------------|
+| Y        | Amount of scrap produced                                |
+| X1       | Quantitative variable. Line Speed                       |
+| X2       | Qualitative variable. 1 for line 1, 0 for line 2        |
+
+```{r, warning=FALSE, message=FALSE}
+lines <- readLines("CH08TA05.txt")
+Y <- vector()
+X1 <- vector()
+X2 <- vector()
+
+library(gdata)
+for(line in lines){
+  line <- trim(line)
+  lineAry <- unlist(strsplit(line, "  "))
+  Y <- c(Y, lineAry[1])
+  X1 <- c(X1, lineAry[2])
+  X2 <- c(X2, lineAry[3])
+}
+
+df <- data.frame(Y=as.numeric(Y),
+                 X1=as.numeric(X1), 
+                 X2=factor(X2, levels=c(0,1), labels=c("Line2", "Line1")))
+
+str(df)
+summary(df)
+
+
+library(car)
+scatterplot(Y ~ X1 | X2, data=df,
+            ylab="Scrap",
+            xlab="Line Speed")
+```
+
+
+
+__Tenative Model__
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2 + \varepsilon$$
+
+```{r, echo=FALSE}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+```{r}
+result1 <- lm(Y ~ X1 + X2 + I(X1 * as.numeric(X2)), data=df)
+result1_smry <- summary(result1)
+df$residuals <- result1_smry$residuals
+print(result1_smry)
+
+result1_aov <- fullRegressionAnova(anova(result1))
+```
+
+# Brown-Forsythe Test for Equal Error Variance in the Lines
+
+$H_o$: equal variances
+
+$H_a$: the two variances are not equal
+
+```{r}
+leveneTest(df$residuals, df$X2, center="median")
+```
+
+Since pvalue > 0.05 conclude equal variances which leads us to conclude the data is approriate for the regression model. 
+
+# Inferences about Two Regression Lines
+
+$H_o: \beta_2 = \beta_3 = 0$
+
+$H_a:$ Not both $\beta_2 = 0$ and $\beta_3 = 0$
+
+```{r}
+term1 <- (result1_aov$SS[3] + result1_aov$SS[4]) / (result1_aov$DF[3] + result1_aov$DF[4])
+term2 <- result1_aov$SS[5] / result1_aov$DF[5]
+F_stat <- term1 / term2
+
+F_stat
+F_crit <- qf(0.99, 2,23)
+
+msg <- paste("F stat: ", F_stat, "\nF crit: ", F_crit, sep="")
+result <- ifelse(F_stat > F_crit, "Conclude Ha, not identical", "Conclude Ho, they are identical")
+cat(msg, "\n", result, sep="")
+
+```

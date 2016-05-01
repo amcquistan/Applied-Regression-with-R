@@ -1,0 +1,189 @@
+---
+title: "Ch 8 - Batter Cell Example"
+author: "Adam McQuistan"
+date: "Sunday, May 01, 2016"
+output: pdf_document
+---
+
+# The dataset
+
+| Variable    | Description                                             |
+|-------------|---------------------------------------------------------|
+| Y           | Number of discharge cycles in battery                   |
+| X1          | Quantitative variable.  Charge rate (ampers)            |
+| X2          | Quantitative variable. Temperature (Celcius)            |
+| $X_1$       | Coded variable. (X1 - 1) / 0.4                          |
+| $X_2$       | Coded variable. (X2 - 20) / 10                          |
+| $X_{1}^{2}$ | Coded variable.                                         |
+| $X_{2}^{2}$ | Coded variable.                                         |
+| $X_{12}$    | Coded variable.                                         |
+
+```{r, warning=FALSE, message=FALSE}
+lines <- readLines("CH08TA01.txt")
+Y <- vector(); X1 <- vector(); X2 <- vector()
+
+library(gdata)
+for(line in lines){
+  line <- trim(line)
+  lineAry <- unlist(strsplit(line, "  "))
+  Y <- c(Y, lineAry[1])
+  X1 <- c(X1, lineAry[2])
+  X2 <- c(X2, lineAry[3])
+}
+
+Y <- as.numeric(Y); X1 <- as.numeric(X1); X2 <- as.numeric(X2)
+X_1 <- (X1 - 1) / 0.4; X_2 <- (X2 - 20) / 10
+X_sq1 <- X_1^2; X_sq2 <- X_2^2; X_12 <- X_1 * X_2
+
+df <- data.frame(Y,X1,X2,X_1,X_2,X_sq1,X_sq2,X_12)
+str(df)
+```
+
+# Correlation Among the Predictor Terms
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+Terms = c("X1 and X1 Sqr","x_1 and x_1 Sqr", "X2 and X2 Sqr", "x_2 and x_2 Sqr")
+Correlations = c(cor(df$X1, df$X1^2), cor(df$X_1, df$X_sq1),
+                 cor(df$X2, df$X2^2), cor(df$X_2, df$X_sq2))
+Correlations <- round(Correlations, 3)
+cor_df <- data.frame(Terms, Correlations)
+kable(cor_df)
+```
+
+Note that recoding the variables reduced the correlation among terms to zero.  
+
+# Fitting the Model
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_{11} X_{1}^{2} + \beta_{22} X_{2}^{2} + \beta_{12} X_1 X_2 + \varepsilon$$
+
+```{r, echo=FALSE}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+```{r}
+result1 <- lm(Y ~ X_1 + X_2 + X_sq1 + X_sq2 + X_12, data=df)
+result1_smry <- summary(result1); print(result1_smry)
+result1_aov <- fullRegressionAnova(anova(result1))
+```
+
+# Residuals Plot
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+df$Residuals <- result1$residuals; df$PredictedVals <- result1$fitted.values
+with(df, {
+     plot(x=PredictedVals, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Predicted Values", ylab="Residuals", main="")
+     points(c(min(PredictedVals), max(PredictedVals)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+with(df, {
+     plot(x=X_1, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="X_1", ylab="Residuals", main="")
+     points(c(min(X_1), max(X_1)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+with(df, {
+     plot(x=X_2, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="X_2", ylab="Residuals", main="")
+     points(c(min(X_2), max(X_2)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+```{r, fig.height=3.6, fig.width=6, echo=FALSE}
+qqnorm(result1$residuals, ylab="Residuals", main="Normal Probability Plot")
+qqline(result1$residuals)
+```
+
+# Assessing Fit
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+df_smry <- tbl_df(df) %>% group_by(X_1, X_2, X_sq1, X_sq2, X_12) %>% summarize(Repeats = n())
+kable(as.data.frame(df_smry))
+```
+
+Since on set of variables are replicated three times in the data a formal lack of fit test can be calculated. 
+
+$H_o: E{Y} = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_{11} X_{1}^{2} + \beta_{22} X_{2}^{2} + \beta_{12} X_1 X_2$; a linear relationship exists
+
+$H_a: E{Y} \neq{\beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_{11} X_{1}^{2} + \beta_{22} X_{2}^{2} + \beta_{12} X_1 X_2}$; there is not relationship
+
+F stat = MSLF / MSPE
+
+F crit = F(1-$\alpha$; c-p; n-c)
+
+
+If F Stat < F crit, conclude $H_o$
+
+If F Stat >= F crit, conclude $H_a$
+
+```{r}
+select_x1 <- df$X_1 == 0; select_x2 <- df$X_2 == 0
+select_x1sqr <- df$X_sq2 == 0; select_x1sqr <- df$X_sq1 == 0
+select_x2sqr <- df$X_sq2 == 0; select_x12 <- df$X_12 == 0
+
+Y_replicates <- df$Y[select_x1 & select_x2 & select_x1sqr & select_x2sqr & select_x12]
+Y_bar_replicates <- mean(Y_replicates)
+
+SSPE <- sum((Y_replicates - Y_bar_replicates)^2)
+SSE <- result1_aov$SS[length(result1_aov$SS)-1]
+SSLF <- SSE - SSPE
+p = 6 # the regression coefficents including intercept
+categories = dim(df_smry)[1] # the count of distinct categories among the parameters
+n <- dim(df)[1]
+
+SSLF_degFreedom <- categories - p
+SSPE_degFreedom <- n - categories
+F_stat <- (SSLF / SSLF_degFreedom) / (SSPE / SSPE_degFreedom)
+F_crit <- qf(0.95,SSLF_degFreedom,SSPE_degFreedom)
+
+msg = paste("F stat = ", F_stat, "\nF crit = ", F_crit)
+result <- ifelse(F_stat < F_crit, 
+                 "\nConclude Ho, a relationship exists. Its a good fit.", 
+                 "\nConclude Ha, there is not relationship. Its not a good fit.")
+cat(msg, result, sep="")
+```
+
+
+# First Order Model
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \varepsilon$$
+
+```{r}
+result2 <- lm(Y ~ X_1 + X_2, data=df)
+summary(result2)
+plot(result2)
+```
+
+# Fitted First Order in Terms of X
+
+
+```{r}
+result3 <- lm(Y ~ X1 + X2, data=df)
+summary(result3)
+plot(result3)
+```
