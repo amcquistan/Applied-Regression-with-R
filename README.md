@@ -1,7 +1,5 @@
 # AppliedRegression with R
 
-![alt tag](R.png)
-
 ## Purpose
 The purpose of this repo is to provide the R code to the examples, assignments, and take
 home exams that are covered in UNO's ISQA 8340 Applied Regression class.  The class is taught
