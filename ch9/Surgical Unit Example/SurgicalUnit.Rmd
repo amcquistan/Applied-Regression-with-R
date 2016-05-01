@@ -1,0 +1,187 @@
+---
+title: "Ch 9 - Surgical Unit Example"
+author: "Adam McQuistan"
+date: "Sunday, May 01, 2016"
+output: pdf_document
+---
+
+# The dataset
+
+| Variable | Description                                             |
+|----------|---------------------------------------------------------| 
+| X1       | blood clotting score                                    |
+| X2       | prognostic index                                        |
+| X3       | enzyme function score                                   |
+| X4       | liver function test score                               |
+| X5       | age in years                                            |
+| X6       | gender, 0 for male and 1 for female                     |
+| X7, X8   | alcohol use. see table below                            |
+| Y        | Survival time                                           |
+
+
+| Alcohol Use | X7 | X8 |
+|-------------|----|----|
+| None        | 0  | 0  |
+| Moderate    | 1  | 0  |
+| Severe      | 0  | 1  |
+
+
+```{r}
+df <- read.table(file="CH09TA01.txt", sep="\t", header=F)
+names(df) = c("X1","X2","X3","X4","X5","X6","X7","X8","Y", "lnY")
+str(df)
+```
+
+## Subsetting the Data into First 54 Cases and First 4 Variables
+
+```{r}
+df54 <- df[1:54,c("X1","X2","X3","X4","Y","lnY")]
+resultY <- lm(Y ~ X1 + X2 + X3 + X4, data=df)
+resultlnY <- lm(lnY ~ X1 + X2 + X3 + X4, data=df)
+```
+
+## Residual Plots of Y and lnY
+
+```{r, fig.height=3.5, fig.width=6, echo=FALSE}
+df54$ResidualsY <- resultY$residuals; df54$ResidualslnY <- resultlnY$residuals
+df54$PredictedValsY <- resultY$fitted.values; df54$PredictedValslnY <- resultlnY$fitted.values
+
+with(df54, {
+     plot(x=PredictedValsY, y=ResidualsY,
+          ylim=c(-max(ResidualsY), max(ResidualsY)),
+          xlab="Predicted Values for Y", ylab="Residuals for Y", main="")
+     points(c(min(PredictedValsY), max(PredictedValsY)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+
+with(df54, {
+     plot(x=PredictedValslnY, y=ResidualslnY,
+          ylim=c(-max(ResidualslnY), max(ResidualslnY)),
+          xlab="Predicted Values for ln(Y)", ylab="Residuals for ln(Y)", main="")
+     points(c(min(PredictedValslnY), max(PredictedValslnY)), 
+            c(0,0), type="l", lwd="2", col="blue")})
+```
+
+```{r, fig.height=3.6, fig.width=6, echo=FALSE}
+qqnorm(resultY$residuals, ylab="Residuals Y", main=""); qqline(resultY$residuals)
+
+qqnorm(resultlnY$residuals, ylab="Residuals ln(Y)", main=""); qqline(resultlnY$residuals)
+```
+
+# Correlations and Scatter Plot Matrix
+
+```{r}
+with(df54, cor(df54[,c("lnY","X1","X2","X3","X4")]))
+```
+
+```{r}
+with(df54, pairs(df54[,c("lnY","X1","X2","X3","X4")]))
+```
+
+# Using $R_{p}^{2}$ and $SSE_p$
+
+```{r, warning=FALSE, message=FALSE}
+library(leaps)
+
+evaluateRegressionModel <- function(x, y, method, names){
+  result <- leaps(x=x, y=y,method=method,names=names)
+  labels <- result$label[2:length(result$label)]
+  
+  Variables <- vector()
+  VariablesCnt <- vector()
+  metric <- vector()
+  
+  for(rowIdx in 1:dim(result$which)[1]){
+    selected <- result$which[rowIdx,]
+    VariablesCnt <- c(VariablesCnt, sum(result$which[rowIdx,]))
+    vars <- paste(labels[selected], collapse=" ")
+    Variables <- c(Variables, vars)  
+    
+    thisMetric <- switch(method,
+                     r2=result$r2[rowIdx],
+                     Cp=result$Cp[rowIdx],
+                     adjr2=result$adjr2[rowIdx])
+              
+    metric <- c(metric, thisMetric)
+  }
+  
+  out <- data.frame(Variables, VariablesCnt, metric)
+  names(out)[3] = method
+  print(out)
+  return(out)
+}
+
+result <- evaluateRegressionModel(x=as.matrix(df54[,1:4]),
+                                  y=df54$lnY,
+                                  method="r2",
+                                  names=names(df54)[1:4])
+
+library(dplyr)
+df_tbl <- tbl_df(result) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MaxR2 = max(r2))
+
+plot(x=result$VariablesCnt, y=result$r2)
+lines(df_tbl$VariablesCnt, df_tbl$MaxR2)
+```
+
+# Mallows $C_p$ Criterion
+
+```{r}
+result <- evaluateRegressionModel(x=as.matrix(df54[,1:4]),
+      y=df54$lnY,
+      method="Cp",
+      names=names(df54)[1:4])
+
+df_tbl <- tbl_df(result) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MinCp = min(Cp))
+
+plot(x=result$VariablesCnt, y=result$Cp)
+lines(df_tbl$VariablesCnt, df_tbl$MinCp)
+```
+
+
+# Stepwise Regression - Forward
+
+For forward stepwise regression it is important to identify an $\alpha$ cut off for determining which predictors to let into the model. For example, if your cut of is 0.05 then you would only include variables with pvalues below the variable. 
+
+```{r, warning=FALSE, message=FALSE}
+library(MASS)
+
+full <- lm(lnY ~ X1 + X2 + X3 + X4 + X5 + X6 + X7 + X8, 
+           data=df)
+Null <- lm(lnY ~ 1, data=df)
+addterm(Null, scope=full, test="F")
+```
+
+For this iteration we would include the predictor with the lowest p value which is X3.
+A new base model is built by including the X3 value then the procedure is ran again. 
+
+```{r}
+newModel <- lm(lnY ~ X3, data=df)
+addterm(newModel, scope=full, test="F")
+```
+
+Now I'll add in X2
+
+
+```{r}
+newModel <- lm(lnY ~ X3 + X2, data=df)
+addterm(newModel, scope=full, test="F")
+```
+
+This time X1 is added
+
+
+```{r}
+newModel <- lm(lnY ~ X3 + X2 + X1, data=df)
+addterm(newModel, scope=full, test="F")
+```
+
+This time through the only variable making the cut off is X8. Adding this gives us our full model. 
+
+
+```{r}
+newModel <- lm(lnY ~ X3 + X2 + X1 + X8, data=df)
+addterm(newModel, scope=full, test="F")
+```
