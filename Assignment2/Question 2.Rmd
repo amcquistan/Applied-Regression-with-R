@@ -1,0 +1,51 @@
+---
+title: "Exam 2 - Question 2"
+author: "Adam McQuistan"
+date: "Tuesday, April 05, 2016"
+output: pdf_document
+---
+
+#Problem 2 - Do problem 6.16 on page 251.
+* Do not do part (b)
+
+
+##Part A. Test whether there is a regression relation, use alpha = 0.10.  State alternative and decision rules.  What does the test imply about the predictors and their usefullness?
+
+
+```{r}
+df <- read.csv("data/6.15-6.16.csv")
+names(df) = c("Satisfaction","Age", "Severity", "Anxiety")
+result <- lm(Satisfaction ~ Age + Severity + Anxiety, data=df)
+result_smry <- summary(result)
+F_crit <- round(qf(0.90, df1=3, df2=42),1)
+F_stat <- round(as.numeric(result_smry$fstatistic["value"]),1)
+```
+
+Analyze and test for the relatedness of Satisfaction to Age, Severity, and Anxiety.
+
+F critical F(0.90, 3, 42) is `r  F_crit`.
+
+$H_0: \beta_1 = 0$ and $\beta_2 = 0$ for F* <= F critical
+
+$H_a:$ not both $\beta_1$ and $\beta_2$ equal zero for F* > F critical
+
+Since F* ( `r F_stat` ) > F critical ( `r F_crit` ) we conclude that Satisfaction are related to Age, Severity, and Anxiety, the usefullness of the model for making predictions have yet to be determined.
+
+##Part C. Calculation coefficient of multople determination.
+
+
+```{r}
+summary(result)
+```
+
+
+
+The Multiple $R^{2}$ value is 0.6822 which translates into the model explaining about 68% of the variation in satisfaction.  The Adjusted $R^{2}$ value of 0.6595 shows the correction for more than on predictor variable overfitting which is a very small change from the standard multiple r-squared value indicating little effects of overfitting. 
+
+To analyze and test the individual parameters of the regression model we use the students t-test such that:
+
+$H_0: \beta_p = 0$ indicating no relationship 
+
+$H_a:$ $\beta_p \neq{0}$ indicating there is a relationship
+
+Since the p-values for both parameters (Disposable income and Target population) are less than 0.05 we conclude each individual parameter is significant and related to sales. 

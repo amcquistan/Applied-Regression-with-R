@@ -1,0 +1,105 @@
+---
+title: "Exam 2 - Question 4"
+author: "Adam McQuistan"
+date: "Tuesday, April 05, 2016"
+output: pdf_document
+---
+
+#Problem 4 - Do problem 7.7 on page 289 - Refers to the commercial realestate data from above
+
+##Part A.  Obtain an analysis of variance table for decomposing the regression sum of squares into extra sums of squares associated with the following scenarios:
+* X4
+* X1 given X4
+* X2 given X4
+* X2 given X1 and X4
+* X3 given X1 and X2 and X4
+
+_For this I have created a full (detailed) regression anova table_
+
+
+```{r}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+__Load Data Set and Recode the Variables__
+
+```{r}
+setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\Exam 2")
+df <- read.csv("data/6.18.csv")
+names(df)
+names(df)[2:6] = c("Y", "X1", "X2", "X3", "X4")
+names(df)
+```
+
+###X4
+```{r}
+resultX4 <- lm(Y ~ X4, data=df)
+resultX4_aov <- fullRegressionAnova(anova(resultX4))
+```
+
+
+###X1 given X4
+```{r}
+resultX1_X4 <- lm(Y ~ X4 + X1, data=df)
+resultX1_X4_aov <- fullRegressionAnova(anova(resultX1_X4))
+```
+
+###X2 given X4
+```{r}
+resultX2_X4 <- lm(Y ~ X4 + X2, data=df)
+resultX2_X4_aov <- fullRegressionAnova(anova(resultX2_X4))
+```
+
+###X2 given X1 and X4
+```{r}
+resultX2_X1nX4 <- lm(Y ~ X1 + X4 + X2, data=df)
+resultX2_X1nX4_aov <- fullRegressionAnova(anova(resultX2_X1nX4))
+```
+
+
+###X3 given X1, X2, and X4
+```{r}
+resultX3_X1nX2nX4 <- lm(Y ~ X1 + X2 + X4 + X3, data=df)
+resultX3_X1nX2nX4_aov <- fullRegressionAnova(anova(resultX3_X1nX2nX4)) 
+```
+
+##Part B. Test whether X3 can be dropped from the model give X1, X2, X3.  Use F statistic and state p-value for leve $\alpha = 0.01$
+
+To test if a singel $\beta_k$ can be dropped from a multiple regression model, use the following formal test
+
+$H_0: \beta_k = 0$
+
+$H_a: \beta_k \neq{0}$
+
+Use the test statistics
+
+
+__partial F test__  Note the partial F test is different in that it only tests whether one $\beta_k = 0$ not whether all $\beta_k = 0$
+  - if F* $\leq{F}$ critical conclude $H_0$
+  
+Test if X3 should be removed from the model at an $\alpha = 0.01$ 
+
+```{r}
+F_stat <- resultX3_X1nX2nX4_aov$F_stats[5]
+F_crit <- qf(0.99, resultX3_X1nX2nX4_aov$DF[5], resultX3_X1nX2nX4_aov$DF[6])
+p_val <- 1-pf(q=F_stat, df1=resultX3_X1nX2nX4_aov$DF[5], df2=resultX3_X1nX2nX4_aov$DF[6])
+conclusion <- ifelse(F_stat <= F_crit, "Conclude Null Hypthosis", "Reject Null Hypthosis")
+cat("F* =", F_stat, ", F crit (0.99,",  resultX3_X1nX2nX4_aov$DF[5], 
+    ",",  resultX3_X1nX2nX4_aov$DF[6], ") =", F_crit, "\n", conclusion,", Pvalue = ", p_val, sep=" ")
+```

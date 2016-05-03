@@ -1,0 +1,267 @@
+---
+title: "Exam 2 - Question 3"
+author: "Adam McQuistan"
+date: "Tuesday, April 05, 2016"
+output: pdf_document
+---
+
+#Problem 3 - Do problem 6.18 on page 252.
+* Only do parts (c-g). 
+* For part (g) do either Levene or Pagan test
+
+##Part C. Fit the regerssion model for the listed predictors below and state the estimated regression equation.
+
+* Y (Rental Rates)
+* X1 (Age)
+* X2 (Operating Expense and Taxes)
+* X3 (Vacancy Rate)
+* X4 (Square Footage)
+
+```{r}
+options(scipen=999)
+df <- read.csv("data/6.18.csv")
+result <- lm(Rental ~ Age + Expense + Vacancy + Footage, data=df)
+result_smry <- summary(result)
+result_smry
+```
+
+$$
+Rate = 12.2 - 0.142(Age) + 0.282(Expense) + 0.619(Vacancy) + 0.000008(Footage)
+$$
+
+
+##Part D. Make and interpret box plot
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+iqr <- IQR(result$residuals)
+smry <- summary(result$residuals)
+smry <- t(as.matrix(smry, nrow=1))
+smry <- data.frame(smry)
+names(smry) = c("Min", "FirstQtr", "Median", "Mean", "ThirdQtr", "Max")
+smry <- cbind(smry, 
+              Low1.5xIQR=(smry$FirstQtr - (1.5 * iqr)),
+              Uppr1.5xIQR=(smry$ThirdQtr + (1.5 * iqr)),
+              Low3xIQR=(smry$FirstQtr - (3 * iqr)),
+              Uppr3xIQR=(smry$ThirdQtr + (3 * iqr)))
+smry <- round(smry, 3)
+kable(smry)
+boxplot(result$residuals, horizontal=T)
+```
+
+| Outlier       | Definition          |
+|---------------|---------------------|
+| Lower Mild    | 1st Qtr - 1.5 x IQR |
+| --------------|---------------------|
+| Upper Mild    | 3rd Qtr + 1.5 x IQR |
+|---------------|---------------------|
+| Lower Extreme | 1st Qtr - 3 x IQR   |
+|---------------|---------------------|
+| Upper Extreme | 3rd Qtr + 3 x IQR   |
+
+
+There are mild lower outliers and mild upper outliers. Fifty percent of the data is between the first and third quartiles.  Overall, it is mildly skewed to the right. 
+
+
+##Part E. Plot Residuals vs Predicted Values, Vs each explanatory variable, vs each two factor ineraction term on separate plots.  Prepare a normal probability plot of the residuals.  Analyze and state your findings.
+
+```{r}
+df_model <- result$model[, 1:5]
+df_model$Residuals <- result_smry$residuals
+df_model$PredictedVals <- result$fitted.values
+df_model$AgeExpense <- df_model$Age * df_model$Expense
+df_model$AgeVacancy <- df_model$Age * df_model$Vacancy
+df_model$AgeFootage <- df_model$Age * df_model$Footage
+df_model$ExpenseVacancy <- df_model$Expense * df_model$Vacancy
+df_model$ExpenseFootage <- df_model$Expense * df_model$Footage
+df_model$VacancyFootage <- df_model$Vacancy * df_model$Footage
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=PredictedVals, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Predicted Values", ylab="Residuals", main="")
+     
+     points(c(min(PredictedVals), max(PredictedVals)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=Age, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Age", ylab="Residuals", main="")
+     
+     points(c(min(Age), max(Age)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=Expense, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Expense", ylab="Residuals", main="")
+     
+     points(c(min(Expense), max(Expense)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=Vacancy, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Vacancy", ylab="Residuals", main="")
+     
+     points(c(min(Vacancy), max(Vacancy)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=Footage, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Footage", ylab="Residuals", main="")
+     
+     points(c(min(Footage), max(Footage)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=AgeExpense, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Age x Expense", ylab="Residuals", main="")
+     
+     points(c(min(AgeExpense), max(AgeExpense)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=AgeVacancy, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Age x Vacancy", ylab="Residuals", main="")
+     
+     points(c(min(AgeVacancy), max(AgeVacancy)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=AgeFootage, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Age x Footage", ylab="Residuals", main="")
+     
+     points(c(min(AgeFootage), max(AgeFootage)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=ExpenseVacancy, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Expense x Vacancy", ylab="Residuals", main="")
+     
+     points(c(min(ExpenseVacancy), max(ExpenseVacancy)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=ExpenseFootage, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Expense x Footage", ylab="Residuals", main="")
+     
+     points(c(min(ExpenseFootage), max(ExpenseFootage)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+
+```{r, fig.height=3.5, fig.width=6}
+with(df_model, {
+     plot(x=VacancyFootage, y=Residuals,
+          ylim=c(-max(Residuals), max(Residuals)),
+          xlab="Vacancy x Footage", ylab="Residuals", main="")
+     
+     points(c(min(VacancyFootage), max(VacancyFootage)), 
+            c(0,0), type="l", lwd="2", col="blue")
+     })
+```
+
+
+```{r, fig.height=3.6, fig.width=6}
+qqnorm(result$residuals, ylab="Residuals", main="Normal Probability Plot")
+qqline(result$residuals)
+```
+
+
+
+As a whole the model appears to have constant variance of the error terms but, individually some of the predictors do not have constant variance across all their values (the domain of predictor values).  For example, Age and Vacancy appear to have a non-constant variance in their error terms. 
+
+Also, it does not appear that the relationship between Age or Vacancy against Rental is linear as shown below. 
+
+```{r}
+with(df, plot(x=Age, y=Rental, type="p"))
+with(df, plot(x=Vacancy, y=Rental, type="p"))
+```
+
+##Part F. Can you conduct a formal lack of fit test?
+
+###Again, I will have to assess whether there are enough naturally occuring repeating vectors of the combination of explanatory variables. 
+
+```{r}
+df_model$CommonLevels <- with(df_model, 
+                              paste(Age, 
+                                    Expense,
+                                    Vacancy,
+                                    Footage, sep=""))
+
+```
+
+###Total Data Instances vs Unique Instances
+
+```{r}
+n <- dim(df_model)[1]
+m <- length(unique(df_model$CommonLevels))
+txt = paste("Total Instances ", n, "  Unique Instances ", m, "\n", sep="")
+cat(txt, sep="")
+```
+
+No because there are not atleast two repeating rows of predictor variabel data. 
+
+
+##Part G. Conduct a levene test for constant variance of the different groups.
+
+```{r, warning=FALSE, message=FALSE}
+# order the df_model datastructure lowest to highest
+# for the fitted (predicted) values
+df_model <- df_model[order(df_model$PredictedVals),]
+case40Prediction <- df_model$PredictedVals[40]
+df_model$LeveneGrps <- ifelse(df_model$PredictedVals <= case40Prediction, "Low", "High")
+library(lawstat)
+with(df_model, levene.test(Residuals, as.factor(LeveneGrps), location="mean"))
+```
+
+The Leven test assumes the two population's variances are equal
+
+$H_o$: no difference in population variances
+
+$H_o$: there are differences in the populations variances
+
+Since p-value > 0.05 we do not reject the null hypothsis and conclude equal variance of the error terms between the groups.

@@ -1,0 +1,63 @@
+---
+title: "Exam 2 - Question 6"
+author: "Adam McQuistan"
+date: "Tuesday, April 05, 2016"
+output: pdf_document
+---
+
+
+
+#Problem 6 - Do problem 7.19 on page 291
+* SPSS does part (a) and do not do extra computation to standardize the data
+* Do part (c) unless you trust SPSS
+
+##Part A. Transform the variables by means of correlation transformation and fit the regression model. 
+
+*** Since I am using R I will transform with R ***
+
+```{r}
+correlatesSd <- function(x){
+  x_bar <- mean(x)
+  x_sqr_diffs <- (x - x_bar)^2
+  x_corr_sd <- sqrt(sum(x_sqr_diffs)/(length(x)-1))
+  return(x_corr_sd)
+}
+
+
+correlatesTransform <- function(x, corrSd){
+  corrTrans <- (1/sqrt(length(x)-1)) * ((x - mean(x))/corrSd)
+  return(corrTrans)
+}
+
+setwd("C:\\Users\\AdamMcQuistan\\Documents\\ISQA 8340\\Exam 2")
+df <- read.csv("data/6.18.csv")
+names(df)[2:6] = c("Y", "X1", "X2", "X3", "X4")
+
+sd_y <- correlatesSd(df$Y)
+df$Y_trans <- correlatesTransform(df$Y, sd_y)
+
+sd_x1 <- correlatesSd(df$X1)
+df$X1_trans <- correlatesTransform(df$X1, sd_x1)
+
+sd_x2 <- correlatesSd(df$X2)
+df$X2_trans <- correlatesTransform(df$X2, sd_x2)
+
+sd_x3 <- correlatesSd(df$X3)
+df$X3_trans <- correlatesTransform(df$X3, sd_x3)
+
+sd_x4 <- correlatesSd(df$X4)
+df$X4_trans <- correlatesTransform(df$X4, sd_x4)
+
+result <- lm(Y_trans ~ X1_trans + X2_trans + X3_trans + X4_trans, data=df)
+summary(result)
+anova(result)
+```
+
+##Part B. Interpret standardized regression coefficients for b2.
+
+
+$H_0: \beta_2 = 0$
+
+$H_a: \beta_2 \neq{0}$
+
+Since the pvalue for for X2 ($\beta_2$) is less than 0.05 we reject the null hypthosis. 

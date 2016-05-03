@@ -1,0 +1,174 @@
+---
+title: "Exam 2 - Ch 7 Question 15"
+author: "Adam McQuistan"
+date: "Monday, April 18, 2016"
+output: pdf_document
+---
+
+
+#Using the commerical properties data set calculate the the following coefficients of partial determination
+* $R^{2} Y 1$
+* $R^{2} Y 2$
+* $R^{2} Y 1 | 4$
+* $R^{2} Y 14$
+* $R^{2} Y 2 | 1,4$
+* $R^{2} Y 3 | 1,2,4$
+* $R^{2}$
+
+
+
+
+```{r}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+
+df <- read.csv("data/6.18.csv")
+
+str(df)
+names(df) = c("Case", "Y", "X1", "X2", "X3", "X4")
+
+```
+
+$X_1 = Age$
+
+$X_2 = Expense$
+
+$X_3 = Vacancy$
+
+$X_4 = Footage$
+
+
+##$R^{2} Y 1$
+
+```{r}
+full <- lm(Y ~ X1, data=df)
+full_smry <- summary(full)
+full_aov <- fullRegressionAnova(anova(full))
+result_pct <- round(full_smry$r.squared * 100, 1)
+
+msg <- paste("X1 explains ", 
+             result_pct, " percent of the variation in Y", sep="")
+cat(msg)
+```
+
+##$R^{2} Y 2$
+
+
+```{r}
+full <- lm(Y ~ X2, data=df)
+full_smry <- summary(full)
+full_aov <- fullRegressionAnova(anova(full))
+result_pct <- round(full_smry$r.squared * 100, 1)
+
+msg <- paste("X2 explains ", 
+             result_pct, " percent of the variation in Y", sep="")
+cat(msg)
+```
+
+
+##$R^{2} Y 1 | 4$
+
+```{r}
+full <- lm(Y ~ X4 + X1, data=df)
+reduced <- lm(Y ~ X4, data = df) 
+
+full_aov <- fullRegressionAnova(anova(full))
+reduced_aov <- fullRegressionAnova(anova(reduced))
+
+SSR_X1_given_X4 <- full_aov[3,3]
+SSE_reduced <- reduced_aov[3,3]
+
+result_pct <- round(SSR_X1_given_X4 / SSE_reduced * 100, 1)
+
+msg <- paste("Adding in X1 to the model containing X4 reduces the error sum of squares by ", 
+             result_pct, " percent", sep="")
+cat(msg)
+```
+
+
+##$R^{2} Y 1,4$
+
+```{r}
+full <- lm(Y ~ X1 + X4, data=df)
+full_smry <- summary(full)
+
+full_aov <- fullRegressionAnova(anova(full))
+result_pct <- round(full_smry$r.squared * 100, 1)
+
+msg <- paste("The variables X1 and X4 explains ", 
+             result_pct, " percent of the variation in Y", sep="")
+cat(msg)
+```
+
+
+##$R^{2} Y 2 | 1,4$
+
+
+```{r}
+full <- lm(Y ~ X4 + X1 + X2, data=df)
+reduced <- lm(Y ~ X4 + X1, data = df) 
+
+full_aov <- fullRegressionAnova(anova(full))
+reduced_aov <- fullRegressionAnova(anova(reduced))
+
+SSR_X2_given_X1X4 <- full_aov[4,3]
+SSE_reduced <- reduced_aov[4,3]
+
+result_pct <- round(SSR_X2_given_X1X4 / SSE_reduced * 100, 1)
+
+msg <- paste("Adding in X2 to the model containing X4 and X1 reduces the error sum of squares by \n", 
+             result_pct, " percent", sep="")
+cat(msg)
+```
+
+
+##$R^{2} Y 3 | 1,2,4$
+
+```{r}
+full <- lm(Y ~ X1 + X2 + X4 + X3, data=df)
+reduced <- lm(Y ~ X1 + X2 + X4, data = df) 
+
+full_aov <- fullRegressionAnova(anova(full))
+reduced_aov <- fullRegressionAnova(anova(reduced))
+
+SSR_X3_given_X1X2X4 <- full_aov[5,3]
+SSE_reduced <- reduced_aov[5,3]
+
+result_pct <- round(SSR_X3_given_X1X2X4 / SSE_reduced * 100, 1)
+
+msg <- paste("Adding in X3 to the model containing X1, X2, and X4 reduces the error sum of squares by \n", 
+             result_pct, " percent", sep="")
+cat(msg)
+```
+
+##$R^{2}$
+
+
+```{r}
+full <- lm(Y ~ X1 + X2 + X3 + X4, data=df)
+full_smry <- summary(full)
+
+full_aov <- fullRegressionAnova(anova(full))
+result_pct <- round(full_smry$r.squared * 100, 1)
+
+msg <- paste("The variables X1, X2, X3, and X4 explains ", 
+             result_pct, " percent of the variation in Y", sep="")
+cat(msg)
+```
+
+
