@@ -185,3 +185,85 @@ This time through the only variable making the cut off is X8. Adding this gives 
 newModel <- lm(lnY ~ X3 + X2 + X1 + X8, data=df)
 addterm(newModel, scope=full, test="F")
 ```
+
+# PRESS Criterion
+
+```{r}
+PRESS <- function(linear.model) {
+  pr <- residuals(linear.model) / (1-lm.influence(linear.model)$hat)
+  press <- sum(pr^2)
+  print(press)
+  return(press)
+}
+```
+
+# Model Validation 
+
+Three Models are Evaluated
+
+$lnY = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3 + \beta_8 X_8 + \varepsilon$
+
+$lnY = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3 + \beta_5 X_5 + \beta_8 X_8 + \varepsilon$
+
+$lnY = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_3 + \beta_5 X_5 + \beta_6 X_6 + \beta_8 X_8 + \varepsilon$
+
+
+```{r, echo=FALSE}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+
+
+```
+
+
+```{r}
+dfTrain <- df[,c("lnY", "X1","X2","X3","X5","X6","X8")]
+result1 <- lm(lnY ~ X1 + X2 + X3 + X8, data=df)
+result2 <- lm(lnY ~ X1 + X2 + X3 + X5 + X8, data=df)
+result3 <- lm(lnY ~ X1 + X2 + X3 + X5 + X6 + X8, data=df)
+
+result1_aov <- fullRegressionAnova(anova(result1))
+result2_aov <- fullRegressionAnova(anova(result2))
+result3_aov <- fullRegressionAnova(anova(result3))
+
+statistic <- c("p","SSEp","PRESSp","Cp","MSEp","R2p")
+model1 <- rep(NA, times=length(statistic))
+model2 <- rep(NA, times=length(statistic))
+model3 <- rep(NA, times=length(statistic))
+
+model1[1] <- result1_aov$DF[1] + 1
+model2[1] <- result2_aov$DF[1] + 1
+model3[1] <- result3_aov$DF[1] + 1
+
+model1[2] <- result1_aov$SS[(length(result1_aov$SS)-1)]
+model2[2] <- result2_aov$SS[(length(result2_aov$SS)-1)]
+model3[2] <- result3_aov$SS[(length(result3_aov$SS)-1)] 
+
+model1[3] <- PRESS(result1)
+model2[3] <- PRESS(result2)
+model3[3] <- PRESS(result3)
+
+
+
+model1[5] <- result1_aov$MS[(length(result1_aov$MS)-1)]
+model2[5] <- result2_aov$MS[(length(result2_aov$MS)-1)]
+model3[5] <- result3_aov$MS[(length(result3_aov$MS)-1)] 
+
+
+
+```
