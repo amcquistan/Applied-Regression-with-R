@@ -1,0 +1,109 @@
+---
+title: "Exam 3 - Question 1"
+author: "Adam McQuistan"
+date: "Saturday, April 30, 2016"
+output: pdf_document
+---
+
+# Problem 1 - 8.24
+
+The dataset
+
+| Variable | Description                                             |
+|----------|---------------------------------------------------------|
+| Price    | Selling price of house                                  |
+| Assessed | Quantitative variable. Assessed value in thousands USD  |
+| Lot      | Qualitative variable. 1 for corner lot, 0 for non corner|
+
+```{r}
+df <- read.csv(file="data/8.24.csv")
+df$Case <- NULL
+df$Lot <- factor(df$Lot, levels=c(0,1), labels=c("Non-Corner", "Corner"))
+summary(df)
+```
+
+## Part A
+
+Plot the sample data for the two populations as a symbolic scatter plot. Does the regression appear to be the same for the two populations?
+
+```{r, warning=FALSE, message=FALSE}
+library(car)
+scatterplot(Price ~ Assessed | Lot, data=df,
+            ylab="Selling Price ($1000s)",
+            xlab="Assessed Value ($1000s)")
+```
+
+
+Yes they are appear to be different.  The slope for non-corner lots is greater and, on average the non-corner lots tend to sell above the corner lots for the same assessed values.  
+
+
+_Note that the zero symbol is for non-corner lots and triangles are for corner lots._
+
+
+# Part B
+
+Test for identity of the regression functuons for dwellings on corner and non-corner lots. Control for risk of type 1 error at 0.05. 
+
+$$Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \beta_3 X_1 X_2 + \varepsilon$$
+
+```{r, echo=FALSE}
+fullRegressionAnova <- function(lm_anova){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  print(df_out)
+  return(df_out)
+}
+```
+
+```{r}
+result1 <- lm(Price ~ Assessed + Lot + I(Assessed * as.numeric(Lot)),
+              data=df)
+result1_smry <- summary(result1)
+df$residuals <- result1_smry$residuals
+print(result1_smry)
+
+result1_aov <- fullRegressionAnova(anova(result1))
+```
+
+
+### Inferences about Two Regression Lines
+
+$H_o: \beta_2 = \beta_3 = 0$
+
+$H_a:$ Not both $\beta_2 = 0$ and $\beta_3 = 0$
+
+```{r}
+term1 <- (result1_aov$SS[3] + result1_aov$SS[4]) / (result1_aov$DF[3] + result1_aov$DF[4])
+term2 <- result1_aov$SS[5] / result1_aov$DF[5]
+F_stat <- term1 / term2
+F_crit <- qf(0.95, 2,60)
+
+msg <- paste("F stat: ", F_stat, "\nF crit: ", F_crit, sep="")
+result <- ifelse(F_stat > F_crit, "Conclude Ha, not identical", "Conclude Ho, they are identical")
+cat(msg, "\n", result, sep="")
+```
+
+Since F stat (18.7) > F crit (F(0.95, 2, 60) = 3.2) we conclude Ha that the regression functions are not identical.
+
+# Part C
+
+Plot the estimated regression function for the two populations and describe the nature of the differences between them. 
+
+```{r}
+scatterplot(Price ~ Assessed | Lot, data=df,
+            ylab="Selling Price ($1000s)",
+            xlab="Assessed Value ($1000s)")
+```
+
+The slope for non-corner lots is greater and, on average the non-corner lots tend to sell above the corner lots for the same assessed values.
