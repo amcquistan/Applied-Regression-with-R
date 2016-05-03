@@ -1,0 +1,301 @@
+---
+title: "Exam 3 - Question 3"
+author: "Adam McQuistan"
+date: "Sunday, May 01, 2016"
+output: pdf_document
+---
+
+# Question 3 - Problem 9.31
+
+## Part A
+  
+Select a model based off stepwise regression. To select the best model the full data set will be split up into two equal parts then the model will be built off the first set and validated against the second set
+
+For forward stepwise regression it is important to identify an $\alpha$ cut off for determining which predictors to let into the model. For example, if your cut of is 0.05 then you would only include variables with pvalues below the variable. 
+
+```{r, warning=FALSE, message=FALSE}
+library(MASS)
+library(dplyr)
+df <- read.csv(file="data/9.31.csv")
+df$id <- NULL
+idx1 <- seq(1,dim(df)[1], by=2)
+idx2 <- seq(2,dim(df)[1], by=2)
+
+dfValidate <- df[idx1,]
+dfTrain <- df[idx2,]
+
+nullModel <- lm(Sales ~ 1, data=dfTrain) # just the intercept
+fullModel <- lm(Sales ~ ., data=dfTrain) # all parameters
+addterm(nullModel, scope=fullModel, test="F")
+```
+
+Begin by adding in the parameter with the highest F value (lowest p-value) which is Finished Square Feet.
+
+```{r}
+newModel <- lm(Sales ~ FinisSq, data=dfTrain)
+addterm(newModel, scope=fullModel, test="F")
+```
+
+Next add in Quality.
+
+```{r}
+newModel <- lm(Sales ~ FinisSq + Quality, data=dfTrain)
+addterm(newModel, scope=fullModel, test="F")
+```
+
+Next add in Style
+
+```{r}
+newModel <- lm(Sales ~ FinisSq + Quality + Style, data=dfTrain)
+addterm(newModel, scope=fullModel, test="F")
+```
+
+Now add in LotSize
+
+```{r}
+newModel <- lm(Sales ~ FinisSq + Quality + Style + LotSize, data=dfTrain)
+addterm(newModel, scope=fullModel, test="F")
+```
+
+
+This time add in YearBuilt
+
+```{r}
+newModel <- lm(Sales ~ FinisSq + Quality + Style + LotSize + YearBuilt, data=dfTrain)
+addterm(newModel, scope=fullModel, test="F")
+```
+
+
+A quick plot of $R^2$ gains and Cp reductions per number of parameters will help verify model quality. 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+modelStr <- paste("FinisSq", "Quality", "Style", "LotSize", "YearBuilt", sep=" ")
+
+library(leaps)
+
+evaluateRegressionModel <- function(x, y, method, names, printResult){
+  result <- leaps(x=x, y=y,method=method,names=names)
+  labels <- result$label[2:length(result$label)]
+  
+  Variables <- vector()
+  VariablesCnt <- vector()
+  metric <- vector()
+  
+  for(rowIdx in 1:dim(result$which)[1]){
+    selected <- result$which[rowIdx,]
+    VariablesCnt <- c(VariablesCnt, sum(result$which[rowIdx,]))
+    vars <- paste(labels[selected], collapse=" ")
+    Variables <- c(Variables, vars)  
+    
+    thisMetric <- switch(method,
+                     r2=result$r2[rowIdx],
+                     Cp=result$Cp[rowIdx],
+                     adjr2=result$adjr2[rowIdx])
+              
+    metric <- c(metric, thisMetric)
+  }
+  
+  out <- data.frame(Variables, VariablesCnt, metric)
+  names(out)[3] = method
+  
+  if(printResult == T){
+    print(out)  
+  }
+  
+  return(out)
+}
+
+r2Train <- evaluateRegressionModel(x=as.matrix(dfTrain[,2:dim(dfTrain)[2]]),
+                                  y=dfTrain$Sales,
+                                  method="r2",
+                                  names=names(dfTrain)[2:dim(dfTrain)[2]],
+                                  FALSE)
+
+df_tbl <- tbl_df(r2Train) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MaxR2 = max(r2))
+
+plot(x=r2Train$VariablesCnt, y=r2Train$r2, main="R2")
+lines(df_tbl$VariablesCnt, df_tbl$MaxR2)
+
+cpTrain <- evaluateRegressionModel(x=as.matrix(dfTrain[,2:dim(dfTrain)[2]]),
+                                  y=dfTrain$Sales,
+                                  method="Cp",
+                                  names=names(dfTrain)[2:dim(dfTrain)[2]],
+                                  FALSE)
+
+df_tbl <- tbl_df(cpTrain) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MinCp = min(Cp))
+
+plot(x=cpTrain$VariablesCnt, y=cpTrain$Cp, main="Cp")
+lines(df_tbl$VariablesCnt, df_tbl$MinCp)
+```
+
+There does not appear to be any significant improvement after adding 5 parameters. 
+
+__The Best Model is:__
+
+$Sales = \beta_0 + \beta_1 FinisSq + \beta_2 Quality + \beta_3 Style + \beta_4 LotSize + \beta_5 YearBuilt + \varepsilon$
+
+## Part B and C
+
+The two models are listed below. For dividing the data set, this was done to build the model for part A.
+
+__Model1__
+
+$Sales = \beta_0 + \beta_1 FinisSq + \beta_2 Quality + \beta_3 Style + \beta_4 LotSize + \beta_5 YearBuilt + \varepsilon$
+
+__Model2__
+
+$Sales = \beta_0 + \beta_1 FinisSq + \beta_2 Quality + \beta_3 Style + \beta_4 LotSize + \varepsilon$
+
+## Part D
+
+Test the above model(s) for validation
+
+```{r, echo=FALSE}
+r2Validate <- evaluateRegressionModel(x=as.matrix(dfValidate[,2:dim(dfValidate)[2]]),
+                                  y=dfValidate$Sales,
+                                  method="r2",
+                                  names=names(dfValidate)[2:dim(dfValidate)[2]],
+                                  FALSE)
+
+cpValidate <- evaluateRegressionModel(x=as.matrix(dfValidate[,2:dim(dfValidate)[2]]),
+                                  y=dfValidate$Sales,
+                                  method="Cp",
+                                  names=names(dfValidate)[2:dim(dfValidate)[2]],
+                                  FALSE)
+
+df_r2V <- tbl_df(r2Validate) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MaxR2 = max(r2))
+
+
+df_r2T <- tbl_df(r2Train) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MaxR2 = max(r2))
+
+
+df_cpV <- tbl_df(cpValidate) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MinCp = min(Cp))
+
+df_cpT <- tbl_df(cpTrain) %>% 
+            group_by(VariablesCnt) %>% 
+            summarize(MinCp = min(Cp))
+
+fullRegressionAnova <- function(lm_anova, printResult){
+  VariationSource <- c("Regression", rownames(lm_anova), "Total")
+  SSR <- sum(lm_anova$"Sum Sq"[1:(length(lm_anova$"Sum Sq")-1)])
+  SST <- sum(lm_anova$"Sum Sq")
+  DFReg <- sum(lm_anova$"Df"[1:(length(lm_anova$"Df")-1)])
+  MSE <- lm_anova$"Mean Sq"[length(lm_anova$"Mean Sq")]
+  MSR <- SSR / DFReg  
+  
+  SS <- c(SSR,lm_anova$"Sum Sq",SST)
+  MS <- c(MSR, lm_anova$"Mean Sq", NA)
+  DF <- c(DFReg, lm_anova$"Df", sum(lm_anova$"Df"))
+  F_stat <- MSR / MSE
+  F_stats <-c(F_stat, lm_anova$"F value",NA)
+  df_out <- data.frame(VariationSource, DF,SS, MS, F_stats)
+  
+  if(printResult == T){
+    print(df_out)  
+  }
+  
+  return(df_out)
+}
+
+PRESS <- function(linear.model) {
+  pr <- residuals(linear.model) / (1-lm.influence(linear.model)$hat)
+  press <- sum(pr^2)
+  return(press)
+}
+
+result1T <- lm(Sales ~ FinisSq + Quality + Style + LotSize + YearBuilt, data=dfTrain)
+result1V <- lm(Sales ~ FinisSq + Quality + Style + LotSize + YearBuilt, data=dfValidate)
+
+result1T_aov <- fullRegressionAnova(anova(result1T), F)
+result1V_aov <- fullRegressionAnova(anova(result1V), F)
+
+result2T <- lm(Sales ~ FinisSq + Quality + Style + LotSize, data=dfTrain)
+result2V <- lm(Sales ~ FinisSq + Quality + Style + LotSize, data=dfValidate)
+
+result2T_aov <- fullRegressionAnova(anova(result2T), F)
+result2V_aov <- fullRegressionAnova(anova(result2V), F)
+
+
+Statistic <- c("p", "SSEp", "PRESSp", "Cp", "MSEp", "R2p")
+model1T <- c(5,
+             result1T_aov$SS[(length(result1T_aov$SS)-1)],
+             PRESS(result1T),
+             df_cpT$MinCp[5],
+             result1T_aov$MS[(length(result1T_aov$MS)-1)],
+             df_r2T$MaxR2[5])
+
+model1V <- c(5,
+             result1V_aov$SS[(length(result1V_aov$SS)-1)],
+             PRESS(result1V),
+             df_cpV$MinCp[5],
+             result1V_aov$MS[(length(result1V_aov$MS)-1)],
+             df_r2V$MaxR2[5])
+
+model2T <- c(4,
+             result2T_aov$SS[(length(result2T_aov$SS)-1)],
+             PRESS(result2T),
+             df_cpT$MinCp[4],
+             result2T_aov$MS[(length(result2T_aov$MS)-1)],
+             df_r2T$MaxR2[4])
+
+
+model2V <- c(4,
+             result2V_aov$SS[(length(result2V_aov$SS)-1)],
+             PRESS(result2V),
+             df_cpV$MinCp[4],
+             result2V_aov$MS[(length(result2V_aov$MS)-1)],
+             df_r2V$MaxR2[4])
+
+df_test <- data.frame(Statistic=Statistic,
+                      Model1Train=round(model1T,3),
+                      Model1Validate=round(model1V,3),
+                      Model2Train=round(model2T,3),
+                      Model2Validate=round(model2V,3))
+
+```
+
+### Model 1 Training
+
+```{r}
+print(result1T)
+```
+
+### Model 1 Validation
+
+```{r}
+print(result1V)
+```
+
+
+### Model 2 Training
+
+```{r}
+print(result2T)
+```
+
+### Model 2 Validation
+
+```{r}
+print(result2V)
+```
+
+## Model Comparison Summary Table
+
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+options(scipen=999)
+kable(df_test)
+```
+
+Since both the training and validation model for the 5 paramter model (model 1) has a PRESSp value closest to SSEp, lowest Cp values, and highest R2p values it is the better of the two models. 
