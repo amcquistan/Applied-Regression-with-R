@@ -21,7 +21,7 @@ In most of the folders you will find a few different types of files:
    a folder and other times not.  Sometimes they are in the raw form from the textbook and other
    times they are a bit more cleaned up.  However, either way the code describes how to ingest them. 
 
-##Course Textbook
+## Course Textbook
 Kutner,  Nachtsheim, and Neter,  
 Applied Linear Regression Models. 
 The McGraw-Hill Companies.4th Edition, 2004.
